@@ -56,8 +56,8 @@ onMounted(async () => { try { values.value = await invoke<Options>('launcherOpti
 
 <style>
 .launcher-settings { max-width: 900px; }
-.setting-stepper { display: grid; grid-template-columns: minmax(0, 1fr) auto 76px auto; align-items: center; gap: 12px; padding: 10px 14px; min-height: 64px; border-bottom: 1px solid var(--pc-raised); }
-.setting-stepper button { min-width: 52px; font-size: 20px; padding: 6px; }
+.setting-stepper { display: grid; grid-template-columns: minmax(0, 1fr) auto 76px auto; align-items: center; gap: 12px; padding: 10px 14px; min-height: 72px; border-bottom: 1px solid var(--pc-raised); }
+.setting-stepper button { min-width: 56px; font-size: 22px; padding: 6px; border-radius: 50%; }
 .setting-stepper output { text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 .about p { margin: 6px 0; }
 </style>

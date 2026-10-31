@@ -172,19 +172,19 @@ onMounted(loadWorlds)
 <style>
 .worlds-page .control-segmented { margin-bottom: 20px; }
 .worlds-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 36%); gap: 28px; align-items: start; }
-.world-list { display: grid; gap: 8px; }
-.world-row { display: flex; gap: 14px; align-items: center; text-align: left; min-height: 72px; }
-.world-row img { width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
-.world-row[aria-pressed=true] { background: var(--pc-raised); box-shadow: inset 3px 0 0 var(--pc-text); }
-.world-detail { position: sticky; top: 0; background: var(--pc-surface); padding: 20px 24px; }
-.world-detail-icon { width: 96px; height: 96px; image-rendering: pixelated; }
+.world-list { display: grid; gap: 10px; }
+.world-row { display: flex; gap: 16px; align-items: center; text-align: left; min-height: 80px; border-radius: 16px; }
+.world-row img { width: 52px; height: 52px; border-radius: 10px; image-rendering: pixelated; flex: none; }
+.world-row[aria-pressed=true] { background: var(--pc-hover); box-shadow: inset 0 0 0 2px var(--pc-text-2); }
+.world-detail { position: sticky; top: 0; background: var(--pc-surface); padding: 24px 28px; border-radius: 24px; }
+.world-detail-icon { width: 104px; height: 104px; border-radius: 18px; image-rendering: pixelated; }
 .world-detail h2 { margin: 12px 0 4px; overflow-wrap: anywhere; }
-.world-play { width: 100%; margin: 12px 0 4px; font-size: 18px; font-weight: 700; }
+.world-play { width: 100%; margin: 12px 0 4px; min-height: 60px; font-size: 20px; font-weight: 700; border-radius: 16px; }
 .server-form .actions { margin-top: 12px; }
 .world-detail .setting-field { grid-template-columns: 1fr; gap: 6px; padding: 6px 0; border: 0; }
 .shot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.shot { display: grid; gap: 6px; padding: 8px; }
-.shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.shot { display: grid; gap: 8px; padding: 10px; border-radius: 16px; }
+.shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 10px; }
 .shot small { color: var(--ore-muted); }
 .shot-viewer { position: fixed; inset: 0; z-index: 300; background: #000e; display: grid; place-items: center; gap: 16px; padding: 24px; grid-template-rows: 1fr auto; }
 .shot-viewer img { max-width: 100%; max-height: calc(100vh - 120px); object-fit: contain; }

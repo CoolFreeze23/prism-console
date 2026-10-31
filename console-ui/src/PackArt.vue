@@ -45,8 +45,8 @@ function loaded(event: Event) {
 </template>
 
 <style>
-.pack-art { display: inline-grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1px #ffffff14; overflow: hidden; }
+.pack-art { display: inline-grid; place-items: center; flex: none; border-radius: var(--pc-radius-lg, 20px); box-shadow: inset 0 0 0 1px #ffffff14; overflow: hidden; }
 .pack-art img { object-fit: contain; image-rendering: auto; }
 .pack-art img.pixel { image-rendering: pixelated; }
-.pack-initial { font-weight: 700; font-stretch: 125%; color: #f1efeacc; line-height: 1; }
+.pack-initial { font-weight: 800; color: #f3f1eccc; line-height: 1; }
 </style>

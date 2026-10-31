@@ -33,7 +33,7 @@ function faceStyle(p: typeof parts.value[number], face: string) {
   </div>
 </template>
 <style scoped>
-.skin-stage {height:300px;perspective:650px;overflow:hidden;background:radial-gradient(ellipse,#29472b,#111b13);border:2px solid #43563d;position:relative}
+.skin-stage {height:300px;perspective:650px;overflow:hidden;background:radial-gradient(ellipse,#29472b,#111b13);border-radius:24px;position:relative}
 .skin-person {position:absolute;left:50%;transform-style:preserve-3d;transition:transform .15s}
 .skin-part,.skin-face,.skin-cape {position:absolute;transform-style:preserve-3d;image-rendering:pixelated;background-repeat:no-repeat}
 .skin-face {backface-visibility:hidden}.skin-cape{backface-visibility:visible}

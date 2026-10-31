@@ -413,16 +413,18 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
   <div class="bp-container" :data-connected="connected">
     <div class="bp-ambient-glow" />
     <header class="bp-header" :inert="blocked">
-      <div class="bp-brand"><strong class="wide">Prism Console</strong></div>
+      <div class="bp-brand"><strong>Prism Console</strong></div>
       <nav class="bp-nav" :aria-label="t('app.main_navigation')">
         <ButtonGlyph button="LB" class="nav-glyph" />
         <button v-for="item in tabs" :key="item" class="bp-nav-btn" :class="{ active: tab === item }" :data-action="item === 'Browse' ? 'browse-modpacks' : undefined" :aria-current="tab === item ? 'page' : undefined" @click="tab = item">{{ t(`nav.${item}` as MessageKey) }}</button>
         <ButtonGlyph button="RB" class="nav-glyph" />
       </nav>
-      <button class="account-chip" @click="tab = 'Accounts'">
-        <img v-if="avatar" :src="avatar" alt="" class="avatar"><span v-else class="avatar avatar-initial" aria-hidden="true">{{ (account?.name || '?').charAt(0).toUpperCase() }}</span>
-        <span>{{ account?.name || t('app.signInButton') }}</span>
-      </button>
+      <div class="header-end">
+        <button class="account-chip" @click="tab = 'Accounts'">
+          <img v-if="avatar" :src="avatar" alt="" class="avatar"><span v-else class="avatar avatar-initial" aria-hidden="true">{{ (account?.name || '?').charAt(0).toUpperCase() }}</span>
+          <span>{{ account?.name || t('app.signInButton') }}</span>
+        </button>
+      </div>
     </header>
     <main :inert="blocked" :aria-busy="busy">
       <section v-if="running" class="running-banner" role="status">
@@ -456,7 +458,7 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
           <h2>{{ t('app.instances') }} <span>{{ state.instances.length }}</span></h2>
           <div class="shelf-row">
             <button v-for="instance in library" :key="instance.id" class="instance-card" :class="{ selected: instance.id === selectedId }" :data-id="instance.id" :data-autofocus="instance.id === selectedId || undefined" @focus="focusTile(instance.id)" @click="tileClick(instance.id)">
-              <PackArt :src="instance.icon" :name="instance.name" :size="168" />
+              <PackArt :src="instance.icon" :name="instance.name" :size="192" />
               <strong>{{ instance.name }}</strong><span>{{ instance.running ? t('app.running') : [instance.loader, instance.version].filter(Boolean).join(' · ') }}</span>
             </button>
             <button v-if="!library.length" class="instance-card add-tile" data-action="empty-browse" :data-autofocus="true" @click="tab = 'Browse'">

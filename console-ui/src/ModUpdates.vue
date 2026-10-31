@@ -46,5 +46,5 @@ function call(method: string, args: Record<string, unknown>) { invoke(method, { 
 
 <style>
 .mod-updates { margin-top: 8px; }
-.update-beta { margin-left: 10px; font-size: 11px; padding: 2px 6px; }
+.update-beta { margin-left: 10px; font-size: 14px; padding: 2px 10px; border-radius: 999px; }
 </style>

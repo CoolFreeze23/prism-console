@@ -8,8 +8,9 @@ The native process is Prism Launcher; the visible console interface is Vue,
 using controller navigation and styling from XMCL PR #1790. No XMCL backend
 or PiLauncher backend is used. See UPSTREAM.md for exact revisions and notices.
 
-The look ("display case") lives in `src/theme.css` and `src/console.css`: warm graphite surfaces, Archivo,
-one accent kept for the primary controller action, and one white focus ring. Each pack's own icon is its artwork
+The look lives in `src/theme.css` and `src/console.css`: warm graphite surfaces, Figtree, rounded corners and
+controller-sized targets (56 px or more, 16 px minimum text), one accent kept for the primary controller action,
+and one white focus ring that follows each control's corners. Each pack's own icon is its artwork
 (`src/PackArt.vue`): icons of 64 px or less are scaled by whole numbers with hard pixels, larger ones are fitted
 without cropping, and a pack without an icon gets its initial.
 

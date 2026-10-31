@@ -24,8 +24,8 @@ const family = computed(() => gamepad.isPlayStation?.value ? 'ps' : gamepad.type
 
 <style>
 /* Round, neutral glyphs on every pad family; only the primary action's glyph carries the accent. */
-.glyph { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--pc-line, #34363a); color: var(--pc-text, #f1efea); font: 800 15px/1 'Archivo Variable', system-ui, sans-serif; vertical-align: middle; }
+.glyph { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--pc-line, #34363a); color: var(--pc-text, #f1efea); font: 800 16px/1 'Figtree Variable', system-ui, sans-serif; vertical-align: middle; }
 .glyph-lb, .glyph-rb { background: var(--pc-raised, #242528); color: var(--pc-text-2, #b4b1aa); font-weight: 700; }
 .glyph-accent { background: var(--pc-accent, #62c554); color: var(--pc-on-accent, #0e1a0b); }
-.glyph-large { width: 40px; height: 40px; font-size: 18px; }
+.glyph-large { width: 42px; height: 42px; font-size: 19px; }
 </style>

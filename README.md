@@ -115,7 +115,7 @@ Builds have Microsoft sign-in turned off unless you give them a Microsoft client
 Prism Console is built on [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) (GPL-3.0-only),
 itself a fork of MultiMC. Controller navigation is adapted from
 [X Minecraft Launcher](https://github.com/Voxelum/x-minecraft-launcher) (MIT). The interface uses the
-[Archivo](https://github.com/Omnibus-Type/Archivo) typeface (SIL Open Font License). Full details are in
+[Figtree](https://github.com/erikdkennedy/figtree) typeface (SIL Open Font License). Full details are in
 [console-ui/UPSTREAM.md](console-ui/UPSTREAM.md).
 
 All code is available under the [GPL-3.0-only](LICENSE) license; see [COPYING.md](COPYING.md) for the notices
