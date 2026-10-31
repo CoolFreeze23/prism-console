@@ -18,6 +18,8 @@ finish-args:
   - --socket=pulseaudio
   # Controllers (the View + Menu chord reads Steam's virtual pad) and GPU access for the game.
   - --device=all
+  # Chromium finds gamepads through udev; without it the interface sees no controller at all.
+  - --filesystem=/run/udev:ro
   - --filesystem=xdg-download
   - --filesystem=xdg-config/kdeglobals:ro
   - --talk-name=com.canonical.AppMenu.Registrar
