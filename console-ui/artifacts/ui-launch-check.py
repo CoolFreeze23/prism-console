@@ -22,9 +22,11 @@ def process_env(pid):
 def environment_report():
     import subprocess
     app = subprocess.run(['pgrep', '-f', '^/app/bin/prismlauncher --dir'], capture_output=True, text=True).stdout.split()
-    host = subprocess.run(['pgrep', '-f', '^flatpak run .*QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:9223 .*io.github.CoolFreeze23.PrismConsole'], capture_output=True, text=True).stdout.split()
-    if not app or not host: failures.append('could not find the app or its launcher process'); return
-    started, inside = process_env(host[0]), process_env(app[0])
+    # run-pack-check.sh records the environment it starts the app with (flatpak execs into bwrap with a cleaned one).
+    started_file = Path.home() / 'Applications/prism-console-pack-env'
+    if not app or not started_file.exists(): failures.append('could not find the app or its start environment'); return
+    started = dict(line.split('=', 1) for line in started_file.read_bytes().decode(errors='replace').split('\0') if '=' in line)
+    inside = process_env(app[0])
     print(f"Started with LC_ALL={started.get('LC_ALL', '-')} SteamGamepadUI={started.get('SteamGamepadUI', '-')} LD_PRELOAD={'set' if started.get('LD_PRELOAD') else '-'}; "
           f"inside the app LC_ALL={inside.get('LC_ALL', '-')} LC_CTYPE={inside.get('LC_CTYPE', '-')}")
     if started.get('LC_ALL') != 'C': failures.append('not started with Gaming Mode environment (LC_ALL=C)')

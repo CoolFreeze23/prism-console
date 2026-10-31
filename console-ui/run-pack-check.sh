@@ -35,6 +35,8 @@ done < "$steam_env"
 strip='/^unset /d'
 [ "${PACK_CHECK_WITHOUT_LOCALE_FIX:-}" = 1 ] && strip="$strip; /LC_ALL\\|LC_CTYPE/d"
 bus="unix:path=/run/user/$(id -u)/bus"
+# The environment the app is started with, for ui-launch-check (flatpak execs into bwrap with a cleaned one).
+printf '%s\0' "$@" > "$root/prism-console-pack-env"
 [ -S "/run/user/$(id -u)/bus" ] || { echo "No running session bus" >&2; exit 1; }
 exec env -i "$@" DISPLAY=":$display" DBUS_SESSION_BUS_ADDRESS="$bus" flatpak run --env=DISPLAY=":$display" --env=QT_QPA_PLATFORM=xcb --env=PRISM_CONSOLE=1 \
  --env=QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:9223 --env=PACK_CHECK_STRIP="$strip" ${PACK_CHECK_QT_LOGGING:+--env=QT_LOGGING_RULES="$PACK_CHECK_QT_LOGGING"} --command=sh io.github.CoolFreeze23.PrismConsole \
