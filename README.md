@@ -96,6 +96,16 @@ window. Use **Open in Console Mode** from its menu entry to get the controller i
 **Controls inside Minecraft:** Minecraft itself has no controller support. Install a controller mod such as
 [Controlify](https://modrinth.com/mod/controlify) in your instance, or use a Steam Input layout.
 
+## Known issues
+
+**Networks that limit connections per device.** Some shared networks (apartment buildings, dorms, hotels) cap
+how many connections each subscriber may have open, and count connections that are still being set up. When
+another device on the same connection opens many at once (a torrent client reconnecting to its peers, for
+example), new connections can be dropped for several seconds. Prism's requests then time out, which used to
+end a launch with "Couldn't reach Minecraft's servers". Prism Console now waits briefly and tries again
+(twice by default; *Settings → Launcher settings → Downloads → Retries per download*), so short drops pass unnoticed. If launches still fail
+on such a network, lower the other device's connection count, or press **Try again**.
+
 ## Building it yourself
 
 See [console-ui/README.md](console-ui/README.md) for the architecture, tests and development setup. In short:
