@@ -96,7 +96,7 @@ try {
   await page.waitForTimeout(400)
   await shoot('library')
 
-  await page.evaluate(() => { window.fixture.launch = { active: true, status: 'Downloading assets (1,204 / 3,390)', current: 1204, total: 3390 }; window.notify() })
+  await page.evaluate(() => { window.fixture.launch = { active: true, stage: 'files', status: 'Downloading assets (1,204 / 3,390)', current: 1204, total: 3390, startedAt: Date.now() - 14000, stageAt: Date.now() - 9000, changedAt: Date.now() }; window.notify() })
   await page.locator('.launch-overlay').waitFor()
   await page.waitForTimeout(400)
   await shoot('launch')

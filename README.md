@@ -9,6 +9,10 @@
   Install modpacks, manage mods and play, all from Gaming Mode, without touching the desktop.
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/library.png" alt="The Prism Console library: the last played modpack with Play, Mods &amp; packs, Worlds and Configure, and the instance grid below" width="800">
+</p>
+
 > **Unofficial.** Prism Console is a fork of [Prism Launcher](https://prismlauncher.org). It is **not** Prism
 > Launcher and is **not** endorsed by or affiliated with the Prism Launcher project. Please report problems
 > here, not to Prism Launcher. Minecraft is a trademark of Mojang; this project is not affiliated with Mojang
@@ -28,6 +32,15 @@
 - **Your Prism skills still apply.** It is Prism Launcher underneath: instances, accounts, Java management
   and every advanced page are still there.
 - English and Brazilian Portuguese.
+
+| | |
+|---|---|
+| ![Browsing Modrinth modpacks: a grid of packs with details, releases and an Install button](docs/screenshots/modpacks.png) | ![The launch screen: three steps, the current download and a timer, with Back to library, Show log and Cancel](docs/screenshots/launch.png) |
+| **Browse and install modpacks** from Modrinth | **Launching:** every step shown, never a frozen screen |
+| ![A failed launch with a plain reason, Try again, Show log and Close](docs/screenshots/launch-failed.png) | ![Launcher settings: interface sounds, volume and mod options as switches and steppers](docs/screenshots/launcher-settings.png) |
+| **Clear failures** with Try again and the log | **Settings** made for a controller |
+| ![Editing a saved multiplayer server: name and address fields with Save and Cancel](docs/screenshots/server-edit.png) | |
+| **Worlds, servers and screenshots**, editable in place | |
 
 ## Install on a Steam Deck / SteamOS
 
