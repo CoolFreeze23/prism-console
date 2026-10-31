@@ -100,7 +100,7 @@ seen, started, last_shot = [], time.time(), 0
 result = 'timeout'
 while time.time() - started < 900:
     state = overlay()
-    running = js("document.querySelector('.chip-live') !== null")
+    running = js("document.querySelector('[data-action=stop-game]') !== null")
     prompt = js("document.querySelector('.dialog-compact #dialog-title')?.textContent || null")
     if prompt == 'Offline player name' and 'offline' not in seen:
         # Microsoft/Mojang sign-in unreachable: Prism offers offline play. Answer as a player would and continue.
@@ -164,7 +164,7 @@ if result == 'running':
         ui_shot('6b-controller-prompt')
         print('Answered controller prompt:', js("(() => { const b = [...document.querySelectorAll('.dialog-compact button')].find(b => b.textContent.trim() === 'Stop'); b?.click(); return !!b })()"))
     time.sleep(8); ui_shot('7-after-stop')
-    print('Still running after stop:', js("document.querySelector('.chip-live') !== null"))
+    print('Still running after stop:', js("document.querySelector('[data-action=stop-game]') !== null"))
     for _ in range(15):
         if js('document.visibilityState') == 'visible': break
         time.sleep(1)

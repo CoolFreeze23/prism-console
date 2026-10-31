@@ -139,7 +139,7 @@ try {
       { id: 'v1', name: 'FO 6.3', number: '6.3.2', type: 'release', minecraft: ['1.21'], loaders: ['fabric'], published: '', size: 1 } ] }
     window.notify()
   })
-  await page.locator('.modpack-releases button').first().waitFor()
+  await page.locator('.preview-target').first().waitFor()
   await page.waitForTimeout(300)
   await shoot('modpacks')
   // B/Close steps back one level at a time: first out of the chosen pack, then out of the page.

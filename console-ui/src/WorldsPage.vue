@@ -175,8 +175,8 @@ onMounted(loadWorlds)
 .world-list { display: grid; gap: 8px; }
 .world-row { display: flex; gap: 14px; align-items: center; text-align: left; min-height: 72px; }
 .world-row img { width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
-.world-row[aria-pressed=true] { background: #253321; border-image-source: url('./oreui/button-accent-default.svg'); }
-.world-detail { position: sticky; top: 0; background: var(--ore-panel); padding: 20px 24px; border: 2px solid #39393b; }
+.world-row[aria-pressed=true] { background: var(--pc-raised); box-shadow: inset 3px 0 0 var(--pc-text); }
+.world-detail { position: sticky; top: 0; background: var(--pc-surface); padding: 20px 24px; }
 .world-detail-icon { width: 96px; height: 96px; image-rendering: pixelated; }
 .world-detail h2 { margin: 12px 0 4px; overflow-wrap: anywhere; }
 .world-play { width: 100%; margin: 12px 0 4px; font-size: 18px; font-weight: 700; }

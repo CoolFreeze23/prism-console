@@ -5,14 +5,16 @@ import { ref } from 'vue'
 import App from './App.vue'
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), connect: vi.fn() }))
 vi.mock('./bridge', () => mocks)
-vi.mock('./upstream/gamepad', () => ({ moveFocus: vi.fn(), useGamepadAction: vi.fn(), useGamepad: () => ({ connected: ref(false), type: ref('xbox'), isPlayStation: ref(false), labels: ref({ confirm: 'A', cancel: 'B', backspace: 'X', keyboard: 'Y', bumpers: 'LB/RB' }),
+vi.mock('./upstream/gamepad', () => ({ moveFocus: vi.fn(), useGamepadAction: vi.fn(), useGamepadInnerNav: vi.fn(), beginTextEntry: vi.fn(), isTextField: () => false, useGamepad: () => ({ connected: ref(false), type: ref('xbox'), isPlayStation: ref(false), labels: ref({ confirm: 'A', cancel: 'B', backspace: 'X', keyboard: 'Y', bumpers: 'LB/RB' }),
   setEnabled() {}, registerContext() {}, unregisterContext() {}, name: ref(''), buttonA: ref('A'), buttonB: ref('B'),
 }) }))
 const instance = { id: 'stable-id', name: 'CrazyCraft', version: '1.21.1', running: false, launching: false, canLaunch: true, icon: '', group: '', minMemory: 2048, maxMemory: 10240 }
 describe('Prism controller UI', () => {
   let wrapper: ReturnType<typeof mount> | undefined
   afterEach(() => { wrapper?.unmount(); vi.resetAllMocks() })
-  const button = (text: string) => wrapper!.findAll('button').find(b => b.text() === text)!
+  // A button's label without its controller glyph ("A", "X", ...).
+  const label = (element: Element) => { const copy = element.cloneNode(true) as HTMLElement; copy.querySelectorAll('.glyph').forEach(g => g.remove()); return copy.textContent?.trim() }
+  const button = (text: string) => wrapper!.findAll('button').find(b => label(b.element) === text)!
   async function setup(value = instance) {
     mocks.connect.mockResolvedValue(undefined)
     mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? { instances: [value], accounts: [] } : undefined)
@@ -21,7 +23,7 @@ describe('Prism controller UI', () => {
   it('uses a stable Prism instance ID and sends one launch per activation', async () => {
     await setup()
     expect(wrapper!.text()).not.toContain('Create or import your first instance.')
-    await button('▶ Play').trigger('click'); await flushPromises()
+    await button('Play').trigger('click'); await flushPromises()
     expect(mocks.invoke.mock.calls.filter(c => c[0] === 'launch')).toEqual([['launch', { id: 'stable-id' }]])
   })
   it('does not offer another launch while Prism is preparing the same instance', async () => {
@@ -75,7 +77,7 @@ describe('Prism controller UI', () => {
       return method === 'snapshot' ? { instances: [instance], accounts: [], prompt } : undefined
     })
     wrapper = mount(App, { attachTo: document.body }); await flushPromises()
-    await button('▶ Play').trigger('click'); await flushPromises()
+    await button('Play').trigger('click'); await flushPromises()
     prompt = { id: 'p1', title: 'Offline player name', text: 'Choose a name', choices: ['Cancel', 'Continue'], input: 'Steve', textInput: true }
     notify(); await flushPromises()
     await wrapper.find('[data-choice=Continue]').trigger('click'); await flushPromises()
@@ -123,11 +125,36 @@ describe('Prism controller UI', () => {
       return method === 'snapshot' ? { instances: [instance], accounts: [] } : undefined
     })
     wrapper = mount(App, { attachTo: document.body }); await flushPromises()
-    await button('▶ Play').trigger('click'); await flushPromises()
+    await button('Play').trigger('click'); await flushPromises()
     expect(wrapper.find('.toast').text()).toContain('Select a signed-in account in Accounts first')
     expect(wrapper.find('.toast').text()).not.toContain('Error:')
     await wrapper.find('.toast button').trigger('click')
     expect(wrapper.find('.toast').exists()).toBe(false)
+  })
+  it('picks a pack on the shelf with one tap and plays the picked pack with the next', async () => {
+    const other = { ...instance, id: 'other', name: 'Other pack', loader: 'Fabric 0.16.9' }
+    mocks.connect.mockResolvedValue(undefined)
+    mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? { instances: [instance, other], accounts: [] } : undefined)
+    wrapper = mount(App, { attachTo: document.body }); await flushPromises()
+    await wrapper.find('.instance-card[data-id=other]').trigger('click'); await flushPromises()
+    expect(wrapper.find('.bp-hero h1').text()).toBe('Other pack')
+    expect(wrapper.find('.hero-meta').text()).toBe('Fabric 0.16.9 · Minecraft 1.21.1')
+    expect(mocks.invoke.mock.calls.some(c => c[0] === 'launch')).toBe(false)
+    await wrapper.find('.instance-card[data-id=other]').trigger('click'); await flushPromises()
+    expect(mocks.invoke.mock.calls.filter(c => c[0] === 'launch')).toEqual([['launch', { id: 'other' }]])
+  })
+  it('asks before cancelling a launch', async () => {
+    mocks.connect.mockResolvedValue(undefined)
+    mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? {
+      instances: [{ ...instance, launching: true, canLaunch: false }], accounts: [], launches: { 'stable-id': { active: true, stage: 'files', status: 'Downloading', startedAt: Date.now() } } } : undefined)
+    wrapper = mount(App, { attachTo: document.body }); await flushPromises()
+    await wrapper.find('[data-action=launch-cancel]').trigger('click'); await flushPromises()
+    expect(mocks.invoke.mock.calls.some(c => c[0] === 'cancelLaunch')).toBe(false)
+    await button('Keep starting').trigger('click'); await flushPromises()
+    expect(mocks.invoke.mock.calls.some(c => c[0] === 'cancelLaunch')).toBe(false)
+    await wrapper.find('[data-action=launch-cancel]').trigger('click'); await flushPromises()
+    await wrapper.find('[data-action=confirm-cancel-launch]').trigger('click'); await flushPromises()
+    expect(mocks.invoke.mock.calls.filter(c => c[0] === 'cancelLaunch')).toEqual([['cancelLaunch', { id: 'stable-id' }]])
   })
   it('opens on the most recently played instance with its playtime', async () => {
     const day = 86400000
@@ -137,10 +164,9 @@ describe('Prism controller UI', () => {
     mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? { instances: [older, recent], accounts: [] } : undefined)
     wrapper = mount(App, { attachTo: document.body }); await flushPromises()
     expect(wrapper.find('.bp-hero h1').text()).toBe('Recent pack')
-    expect(wrapper.find('.bp-hero .eyebrow').text()).toBe('Continue playing')
-    expect(wrapper.find('.bp-hero').text()).toContain('3 h 15 min played')
-    expect(wrapper.find('.bp-hero').text()).toContain('Played today')
-    expect(wrapper.findAll('.instance-card strong').map(c => c.text())).toEqual(['Recent pack', 'Older pack'])
+    expect(wrapper.find('.hero-played').text()).toBe('Played today · 3 h 15 min played')
+    expect(wrapper.find('.instance-card.selected strong').text()).toBe('Recent pack')
+    expect(wrapper.findAll('.instance-card[data-id] strong').map(c => c.text())).toEqual(['Recent pack', 'Older pack'])
   })
   it('announces a finished background task once', async () => {
     let task: any = { active: true, title: 'Add CrazyCraft to Steam', status: 'Adding CrazyCraft to Steam…' }
@@ -162,8 +188,9 @@ describe('Prism controller UI', () => {
     } : undefined)
     wrapper = mount(App, { attachTo: document.body }); await flushPromises()
     const overlay = wrapper.find('.launch-overlay')
-    expect(overlay.findAll('.launch-steps li').map(li => li.classes())).toEqual([['done'], ['current'], []])
-    expect(overlay.find('[aria-current=step]').text()).toContain('Preparing game files')
+    expect(overlay.find('[aria-current=step]').text()).toBe('Preparing game files')
+    expect(overlay.find('.launch-step').text()).toContain('step 2 of 3')
+    expect(overlay.find('.launch-activity li').text()).toContain('Downloading libraries')
     expect(overlay.find('.launch-timing').text()).toBe('1:00 · usually ready in about 40 s')
     expect(overlay.find('.launch-stall').text()).toContain('Still working on game files')
     expect(overlay.find('[data-action=launch-hide]').exists()).toBe(true)
@@ -176,7 +203,7 @@ describe('Prism controller UI', () => {
     wrapper = mount(App, { attachTo: document.body }); await flushPromises()
     launch = { active: false, failed: true, crashed: true, status: 'Game crashed.', logTail: ['[Render thread/ERROR] Missing texture', 'Exit code 1'] }
     notify(); await flushPromises()
-    expect(wrapper.find('.launch-overlay .eyebrow').text()).toBe('The game crashed')
+    expect(wrapper.find('.launch-overlay .failed-step').text()).toBe('The game crashed')
     expect(wrapper.find('.launch-tail').text()).toContain('Missing texture')
     expect(wrapper.find('[data-action=launch-retry]').exists()).toBe(true)
   })

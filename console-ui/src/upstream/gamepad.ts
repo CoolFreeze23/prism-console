@@ -688,6 +688,9 @@ export interface GamepadContext {
   onTab?: (direction: 'prev' | 'next') => void
   /** Overrides the default focus navigation (moveFocus) when provided. */
   onNavigate?: (direction: 'up' | 'down' | 'left' | 'right') => void
+  /** Local change: X / Y pressed while this context is active (e.g. a full-screen page's own actions). */
+  onX?: () => void
+  onY?: () => void
   root?: () => HTMLElement | null
 }
 
@@ -990,6 +993,14 @@ const useGamepadCore = createGlobalState(() => {
     }
     if (justPressed(buttons, GamepadButtonIndex.Start) && ctx.onMenu) {
       ctx.onMenu()
+      return
+    }
+    if (justPressed(buttons, GamepadButtonIndex.X) && ctx.onX) {
+      ctx.onX()
+      return
+    }
+    if (justPressed(buttons, GamepadButtonIndex.Y) && ctx.onY) {
+      ctx.onY()
       return
     }
     if (justPressed(buttons, GamepadButtonIndex.Select)) {

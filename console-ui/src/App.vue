@@ -7,7 +7,6 @@ import { beginTextEntry, isTextField, moveFocus, useGamepad, useGamepadAction } 
 import { chooseLocale, locale, t, tn, type MessageKey } from './i18n'
 import { en } from './messages/en'
 import fallbackIcon from './fallback.svg'
-import appIcon from './app-icon.svg'
 import Workflows from './Workflows.vue'
 import Catalog from './Catalog.vue'
 import ModpackBrowser from './ModpackBrowser.vue'
@@ -17,23 +16,35 @@ import FilePicker from './FilePicker.vue'
 import AccountPanel from './AccountPanel.vue'
 import NativeWorkflow from './NativeWorkflow.vue'
 import ButtonGlyph from './ButtonGlyph.vue'
+import PackArt from './PackArt.vue'
 import LauncherSettings from './LauncherSettings.vue'
 import { play, soundSettings } from './sound'
 import type { Control } from './WorkflowControl.vue'
 function iconError(event: Event) { const image = event.target as HTMLImageElement; if (!image.src.endsWith(fallbackIcon)) image.src = fallbackIcon }
 const state = ref<Snapshot>({ instances: [], accounts: [] })
 const selectedId = ref(''), tab = ref('Library'), error = ref(''), busy = ref(false), connected = ref(false)
-const tabs = ['Library', 'Accounts', 'Settings']
+// Accounts is reached from the account chip, not the tab row.
+const tabs = ['Library', 'Browse', 'Settings']
 const selected = computed(() => state.value.instances.find(i => i.id === selectedId.value))
 const account = computed(() => state.value.accounts.find(a => a.selected))
-const query = ref('')
 // Most recently played first, so the pack you were playing is always the first card.
 const library = computed(() => [...state.value.instances].sort((a, b) => (b.lastLaunch || 0) - (a.lastLaunch || 0) || a.name.localeCompare(b.name)))
-const filtered = computed(() => library.value.filter(i => i.name.toLowerCase().includes(query.value.toLowerCase())))
 const recent = computed(() => library.value[0]?.lastLaunch ? library.value[0] : undefined)
 function playTime(seconds = 0) {
   const hours = Math.floor(seconds / 3600), minutes = Math.floor(seconds % 3600 / 60)
   return hours ? t('app.playedFor', { time: t('time.hoursMinutes', { hours, minutes }) }) : minutes ? t('app.playedFor', { time: t('time.minutes', { minutes }) }) : ''
+}
+// The hero's two lines: when the pack was played, and what it runs on.
+const playedLine = computed(() => selected.value ? [lastPlayed(selected.value.lastLaunch), playTime(selected.value.playTime)].filter(Boolean).join(' · ') : '')
+const metaLine = computed(() => selected.value ? [selected.value.loader, selected.value.version ? t('app.minecraftVersion', { version: selected.value.version }) : t('app.versionNotInstalled')].filter(Boolean).join(' · ') : '')
+// Moving onto a pack picks it (the hero follows); A or a tap on the picked pack plays it.
+function focusTile(id: string) { if (Date.now() - lastPointer > 400) selectedId.value = id }
+function tileClick(id: string) { if (id !== selectedId.value) selectedId.value = id; else playSelected() }
+function playSelected() {
+  const pack = selected.value
+  if (!pack || busy.value) return
+  if (pack.running) action('backToGame')
+  else if (pack.canLaunch && !pack.launching) action('launch', { id: pack.id })
 }
 function lastPlayed(when = 0) {
   if (!when) return ''
@@ -62,7 +73,7 @@ watch([() => state.value.setup?.required, () => state.value.prompt?.id], ([requi
 const localResource = ref(''), resourceBrowser = ref(false)
 const dialogTitle = computed(() => modal.value === 'workflow' ? flow.value?.title || 'Prism' : state.value.prompt?.id ? tn(state.value.prompt.title) : (modal.value && `title.${modal.value}` in en ? t(`title.${modal.value}` as MessageKey) : t('title.activity')))
 // Short confirmations stay as a centred card; everything else is a full-screen page.
-const compact = computed(() => modal.value === 'prompt' || modal.value === 'stop')
+const compact = computed(() => ['prompt', 'stop', 'cancel-launch'].includes(modal.value))
 watch(() => state.value.prompt?.id, id => {
   if (id) { priorFocus = document.activeElement as HTMLElement; promptInput.value = state.value.prompt?.input || ''; open('prompt') }
   else if (modal.value === 'prompt') close()
@@ -176,6 +187,14 @@ const overlay = computed(() => launchFailure.value ? 'failed' : launching.value 
 const overlayInstance = computed(() => state.value.instances.find(i => i.id === (launchFailure.value?.id ?? launching.value?.id)))
 const launchState = computed(() => launching.value ? state.value.launches?.[launching.value.id] : undefined)
 const launchPercent = computed(() => launchState.value?.total ? Math.min(100, Math.round((launchState.value.current || 0) / launchState.value.total * 100)) : 0)
+// The launch screen's activity list: each new status line with the time it appeared.
+const activity = ref<{ at: number; text: string }[]>([])
+watch(() => `${launching.value?.id}:${launchState.value?.startedAt ?? ''}`, () => { activity.value = [] })
+watch(() => launchState.value?.status, status => {
+  const text = tn(status)
+  if (!text || activity.value[activity.value.length - 1]?.text === text) return
+  activity.value = [...activity.value.slice(-5), { at: elapsed.value, text }]
+})
 watch(() => !!overlay.value || !!launching.value, on => { window.clearInterval(ticker); if (on) ticker = window.setInterval(() => { now.value = Date.now() }, 1000) }, { immediate: true })
 const blocked = computed(() => !!modal.value || !!overlay.value)
 watch(overlay, async (value, previous) => {
@@ -185,10 +204,13 @@ watch(overlay, async (value, previous) => {
     root: () => overlayRoot.value,
     onCancel: () => overlay.value === 'failed' ? (launchFailure.value = null) : hideLaunch(),
     onConfirm: confirmFocused,
+    onY: launchLog,
+    // Cancelling asks first, so a stray press never throws away a launch.
+    onX: () => { if (overlay.value === 'launching') open('cancel-launch') },
   })
   await nextTick(); overlayRoot.value?.querySelector<HTMLElement>('button')?.focus()
 })
-watch(overlay, (value, previous) => { if (!value && previous) nextTick(() => (priorFocus?.isConnected ? priorFocus : document.querySelector<HTMLElement>('main button'))?.focus()) })
+watch(overlay, (value, previous) => { if (!value && previous) nextTick(() => (priorFocus?.isConnected ? priorFocus : (document.querySelector<HTMLElement>('main [data-autofocus]') || document.querySelector<HTMLElement>('main button')))?.focus()) })
 function hideLaunch() { if (launching.value) launchHidden.value = launching.value.id }
 // Prism's own failure text is technical and English. Known causes get a plain reason; the details stay in Show log.
 const NETWORK_FAILURE = /could not download metadata|metadata update task failed|timed out|timeouterror|host\S* not found|hostnotfound|connection refused|network is unreachable|no route to host|name resolution|unknownnetworkerror/i
@@ -205,6 +227,8 @@ const failureReason = computed(() => {
 function launchLog() { const id = launchFailure.value?.id ?? launching.value?.id; if (id) { selectedId.value = id; open('logs'); refresh() } }
 function retryLaunch() { const id = launchFailure.value?.id; launchFailure.value = null; if (id) action('launch', { id }) }
 
+// The Browse tab shows the modpack state as it is now, not as it was when the tab was last open.
+watch(tab, value => { if (value === 'Browse') refresh() })
 let refreshActive = false, refreshAgain = false
 async function refresh() {
   // A change notification during a refresh schedules one more pass instead of being dropped.
@@ -219,8 +243,8 @@ async function refresh() {
       const currentFlow = await invoke<any>('workflow'); flow.value = currentFlow?.id ? currentFlow : null
       if (modal.value === 'logs' && selectedId.value) logLines.value = await invoke('launchLog', { id: selectedId.value })
       // The browser state is fetched only when it changed (its revision rides on the snapshot).
-      if (modal.value === 'modpacks' && (state.value.modpacksRevision !== modpacksRevision || !modpacks.value.hits)) { modpacksRevision = state.value.modpacksRevision; modpacks.value = await invoke<ModpackState>('modpacks') }
-      if (modal.value === 'resources') modUpdates.value = await invoke<ModUpdateState>('modUpdates')
+      if ((modal.value === 'modpacks' || tab.value === 'Browse') && (state.value.modpacksRevision !== modpacksRevision || !modpacks.value.hits)) { modpacksRevision = state.value.modpacksRevision; modpacks.value = (await invoke<ModpackState>('modpacks')) || {} }
+      if (modal.value === 'resources') modUpdates.value = (await invoke<ModUpdateState>('modUpdates')) || {}
       if (!state.value.instances.some(i => i.id === selectedId.value)) selectedId.value = library.value[0]?.id ?? ''
     } while (refreshAgain)
   } catch (e) { error.value = String(e) } finally { refreshActive = false }
@@ -244,15 +268,19 @@ const gamepad = useGamepad({
   actions: {
     navigateTab(direction) {
       if (blocked.value) return
-      tab.value = tabs[(tabs.indexOf(tab.value) + (direction === 'next' ? 1 : tabs.length - 1)) % tabs.length]
-      nextTick(() => document.querySelector<HTMLElement>('main button')?.focus())
+      const current = Math.max(0, tabs.indexOf(tab.value === 'Accounts' ? 'Settings' : tab.value))
+      tab.value = tabs[(current + (direction === 'next' ? 1 : tabs.length - 1)) % tabs.length]
+      nextTick(() => (document.querySelector<HTMLElement>('main [data-autofocus]') || document.querySelector<HTMLElement>('main button'))?.focus())
     },
-    back: close, quickAction: () => afterChordCheck(() => open('commands')), openTasks: () => afterChordCheck(() => open('running')),
+    back: close,
+    // Menu: the picked pack's options on the library, all Prism tools elsewhere.
+    quickAction: () => afterChordCheck(() => open(tab.value === 'Library' && selected.value ? 'edit' : 'commands')),
+    openTasks: () => afterChordCheck(() => open('running')),
   }, onEnablePrompt: () => gamepad.setEnabled(true),
 })
 const libraryShortcuts = () => blocked.value || tab.value !== 'Library' || !selected.value
-useGamepadAction('X', { label: () => t('app.configure'), handler: () => open('edit'), disabled: libraryShortcuts })
-useGamepadAction('Y', { label: () => t('app.mods_packs'), handler: () => open('resources'), disabled: libraryShortcuts })
+useGamepadAction('X', { label: () => selected.value?.running ? t('app.stop_game') : t('app.mods_packs'), handler: () => open(selected.value?.running ? 'stop' : 'resources'), disabled: libraryShortcuts })
+useGamepadAction('Y', { label: () => t('app.worlds'), handler: () => open('worlds'), disabled: libraryShortcuts })
 let priorFocus: HTMLElement | null = null
 // A on a text field starts typing in it (with Steam's keyboard); on anything else it presses it.
 function confirmFocused() { const active = document.activeElement; if (isTextField(active)) beginTextEntry(active); else (active as HTMLElement)?.click() }
@@ -285,6 +313,14 @@ function clickSound(event: MouseEvent) {
   play(kind === 'play' ? 'launch' : 'confirm')
 }
 function close() {
+  // Outside a page, B steps back to the library tab (Browse first closes its own pickers).
+  if (!modal.value && !overlay.value && tab.value !== 'Library') {
+    if (!window.dispatchEvent(new Event('prism-back', { cancelable: true }))) return
+    play('back')
+    tab.value = 'Library'
+    nextTick(() => (document.querySelector<HTMLElement>('main [data-autofocus]') || document.querySelector<HTMLElement>('main button'))?.focus())
+    return
+  }
   // A page with its own inner level (a chosen pack, an open screenshot) steps back there first.
   if (modal.value && modal.value !== 'setup') play('back')
   if (modal.value && !window.dispatchEvent(new Event('prism-back', { cancelable: true }))) return
@@ -297,8 +333,14 @@ function close() {
   nextTick(() => priorFocus?.focus())
 }
 async function open(which: string) {
+  // Modpacks live on the Browse tab now; anything that asks for them goes there.
+  if (which === 'modpacks') {
+    if (modal.value) { modal.value = ''; gamepad.unregisterContext('prism-dialog') }
+    tab.value = 'Browse'
+    return
+  }
   if (state.value.setup?.required && !['setup', 'prompt'].includes(which)) return
-  if (!['running', 'create', 'import', 'modpacks', 'preferences', 'launcher', 'prompt', 'setup', 'accounts', 'workflow', 'commands'].includes(which) && !selected.value) return
+  if (!['running', 'create', 'import', 'modpacks', 'preferences', 'launcher', 'cancel-launch', 'prompt', 'setup', 'accounts', 'workflow', 'commands'].includes(which) && !selected.value) return
   priorFocus = document.activeElement as HTMLElement
   if (which === 'edit' && selected.value) {
     name.value = selected.value.name; minMemory.value = selected.value.minMemory; maxMemory.value = selected.value.maxMemory
@@ -342,7 +384,7 @@ onMounted(async () => {
   window.addEventListener('focusin', focusSound)
   window.addEventListener('pointerdown', pointerSeen, true)
   window.addEventListener('click', clickSound, true)
-  try { await connect(refresh, onChord); connected.value = true; await refresh(); await nextTick(); document.querySelector<HTMLElement>('main button')?.focus() }
+  try { await connect(refresh, onChord); connected.value = true; await refresh(); await nextTick(); (document.querySelector<HTMLElement>('main [data-autofocus]') || document.querySelector<HTMLElement>('main button'))?.focus() }
   catch (e) { error.value = String(e) }
 })
 onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEventListener('prism-open-keyboard', keyboard); window.removeEventListener('focusin', focusSound); window.removeEventListener('pointerdown', pointerSeen, true); window.removeEventListener('click', clickSound, true); gamepad.unregisterContext('prism-dialog'); gamepad.unregisterContext('prism-launch') })
@@ -352,10 +394,10 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
   <div class="bp-container" :data-connected="connected">
     <div class="bp-ambient-glow" />
     <header class="bp-header" :inert="blocked">
-      <div class="bp-brand"><img :src="appIcon" alt="" class="brand-logo"><strong>Prism Console</strong></div>
+      <div class="bp-brand"><strong class="wide">Prism Console</strong></div>
       <nav class="bp-nav" :aria-label="t('app.main_navigation')">
         <ButtonGlyph button="LB" class="nav-glyph" />
-        <button v-for="item in tabs" :key="item" class="bp-nav-btn" :class="{ active: tab === item }" :aria-current="tab === item ? 'page' : undefined" @click="tab = item">{{ t(`nav.${item}` as MessageKey) }}</button>
+        <button v-for="item in tabs" :key="item" class="bp-nav-btn" :class="{ active: tab === item }" :data-action="item === 'Browse' ? 'browse-modpacks' : undefined" :aria-current="tab === item ? 'page' : undefined" @click="tab = item">{{ t(`nav.${item}` as MessageKey) }}</button>
         <ButtonGlyph button="RB" class="nav-glyph" />
       </nav>
       <button class="account-chip" @click="tab = 'Accounts'">
@@ -371,28 +413,43 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
         <button class="primary" data-action="back-to-game" @click="action('backToGame')">{{ t('running.backToGame') }}</button>
       </section>
       <template v-if="tab === 'Library'">
-        <section class="bp-hero" v-if="selected">
-          <img :src="selected.icon || fallbackIcon" @error="iconError" class="hero-icon" alt="">
-          <div class="hero-info"><div class="eyebrow">{{ selected === recent ? t('app.continuePlaying') : selected.group || t('app.yourLibrary') }}</div><h1>{{ selected.name }}</h1>
-            <div class="bp-hero-chips"><span class="bp-chip">{{ selected.version ? t('app.minecraftVersion', { version: selected.version }) : t('app.versionNotInstalled') }}</span><span class="bp-chip chip-live" v-if="selected.running">{{ t('app.running') }}</span><span class="bp-chip chip-quiet" v-if="playTime(selected.playTime)">{{ playTime(selected.playTime) }}</span><span class="bp-chip chip-quiet" v-if="lastPlayed(selected.lastLaunch)">{{ lastPlayed(selected.lastLaunch) }}</span></div>
-            <div class="actions">
-              <button class="primary play" :disabled="busy || !connected || selected.running || !selected.canLaunch" data-action="play" @click="action('launch', { id: selectedId })">{{ selected.launching ? t('app.starting') : `▶ ${t('app.play')}` }}</button>
-              <button v-if="selected.running" data-action="stop-game" :disabled="busy" @click="open('stop')">{{ t('app.stop_game') }}</button>
-              <button @click="open('resources')">{{ t('app.mods_packs') }}</button><button @click="open('worlds')">{{ t('app.worlds') }}</button><button data-action="configure" @click="open('edit')">{{ t('app.configure') }}</button>
-              <button v-if="state.launches?.[selectedId]" @click="open('logs'); refresh()">{{ t('app.activity_logs') }}</button>
+        <section class="bp-hero lib-hero" v-if="selected">
+          <div class="hero-info">
+            <h1>{{ selected.name }}</h1>
+            <p v-if="playedLine" class="hero-played">{{ playedLine }}</p>
+            <p class="hero-meta">{{ metaLine }}</p>
+            <!-- What A, X and Y do for this pack. Tappable, but the stick moves along the shelf, never up here. -->
+            <div class="hero-actions" data-gamepad-skip>
+              <button tabindex="-1" class="hero-action primary-action" data-action="play" :disabled="busy || !connected || (!selected.running && (!selected.canLaunch || selected.launching))" @click="playSelected">
+                <ButtonGlyph button="A" accent large />{{ selected.running ? t('running.backToGame') : selected.launching ? t('app.starting') : t('app.play') }}
+              </button>
+              <button v-if="selected.running" class="hero-action" data-action="stop-game" :disabled="busy" @click="open('stop')"><ButtonGlyph button="X" />{{ t('app.stop_game') }}</button>
+              <button v-else class="hero-action" data-action="mods" @click="open('resources')"><ButtonGlyph button="X" />{{ t('app.mods_packs') }}</button>
+              <button tabindex="-1" class="hero-action" data-action="worlds" @click="open('worlds')"><ButtonGlyph button="Y" />{{ t('app.worlds') }}</button>
             </div>
           </div>
+          <PackArt :src="selected.icon" :name="selected.name" :size="288" />
         </section>
-        <section v-if="!selected" class="empty"><h1>{{ connected ? t('app.emptyLibrary') : t('app.connecting') }}</h1><p v-if="connected">{{ t('app.create_or_import_your_first') }}</p></section>
-        <div class="library-toolbar"><h2>{{ t('app.instances') }} <span>{{ state.instances.length }}</span></h2>
-          <input v-model="query" type="search" :placeholder="t('app.search_library')" :aria-label="t('app.search_library')">
-          <button data-action="browse-modpacks" :disabled="!connected || busy" @click="open('modpacks')">{{ t('app.browse_modpacks') }}</button>
-          <button :disabled="!connected || busy" @click="open('create')">{{ t('app.add_instance') }}</button>
-        </div>
-        <div class="instance-grid"><button v-for="instance in filtered" :key="instance.id" class="instance-card" :class="{ selected: instance.id === selectedId }" :aria-pressed="instance.id === selectedId" @click="selectedId = instance.id">
-          <img :src="instance.icon || fallbackIcon" @error="iconError" alt=""><strong>{{ instance.name }}</strong><span>{{ instance.running ? '● Running' : instance.version }}</span>
-        </button></div>
+        <section v-else class="bp-hero lib-hero empty">
+          <div class="hero-info"><h1>{{ connected ? t('app.emptyLibrary') : t('app.connecting') }}</h1><p v-if="connected" class="hero-played">{{ t('app.create_or_import_your_first') }}</p></div>
+        </section>
+        <section class="shelf" :aria-label="t('app.instances')">
+          <h2>{{ t('app.instances') }} <span>{{ state.instances.length }}</span></h2>
+          <div class="shelf-row">
+            <button v-for="instance in library" :key="instance.id" class="instance-card" :class="{ selected: instance.id === selectedId }" :data-id="instance.id" :data-autofocus="instance.id === selectedId || undefined" @focus="focusTile(instance.id)" @click="tileClick(instance.id)">
+              <PackArt :src="instance.icon" :name="instance.name" :size="168" />
+              <strong>{{ instance.name }}</strong><span>{{ instance.running ? t('app.running') : [instance.loader, instance.version].filter(Boolean).join(' · ') }}</span>
+            </button>
+            <button v-if="!library.length" class="instance-card add-tile" data-action="empty-browse" :data-autofocus="true" @click="tab = 'Browse'">
+              <span class="pack-art add-art" aria-hidden="true">↓</span><strong>{{ t('app.browse_modpacks') }}</strong><span>{{ t('app.browseTileHint') }}</span>
+            </button>
+            <button class="instance-card add-tile" data-action="add-instance" :disabled="!connected" @click="open('create')">
+              <span class="pack-art add-art" aria-hidden="true">+</span><strong>{{ t('app.addInstanceTile') }}</strong><span>{{ t('app.addInstanceHint') }}</span>
+            </button>
+          </div>
+        </section>
       </template>
+      <ModpackBrowser v-else-if="tab === 'Browse'" :state="modpacks" :busy="busy || !!state.task?.active" @installed="tab = 'Library'; refresh()" @error="error = $event" />
       <section v-else-if="tab === 'Accounts'" class="page"><h1>{{ t('app.accounts') }}</h1><p class="muted">{{ t('app.choose_the_account_prism_uses') }}</p>
         <button v-for="a in state.accounts" :key="a.id" class="row" :aria-pressed="a.selected" :disabled="busy" @click="action('selectAccount', { id: a.id })">{{ a.name }} <span>{{ a.selected ? t('app.inUse') : t('app.useAccount') }}</span></button>
         <div class="login-state" v-if="state.login?.status" role="status"><p>{{ state.login.status }}</p>
@@ -403,7 +460,7 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
         <button v-for="a in state.accounts" :key="'manage-' + a.id" :disabled="busy" @click="managedAccount = a.id; open('accounts')">{{ t('app.manageAccount', { name: a.name }) }}</button>
       </section>
       <section v-else class="page"><h1>{{ t('app.settings') }}</h1><p class="muted">{{ t('app.prism_manages_your_java_installations') }}</p>
-        <button class="primary" @click="open('preferences')" :disabled="!connected">{{ t('app.java_memory_performance') }}</button>
+        <button @click="open('preferences')" :disabled="!connected">{{ t('app.java_memory_performance') }}</button>
         <button data-action="launcher-settings" @click="open('launcher')" :disabled="!connected">{{ t('app.launcher_settings') }}</button>
         <button @click="action('nativeDialog', { route: 'settings' })" :disabled="!connected">{{ t('app.advanced_prism_settings') }}</button>
         <button @click="open('commands')">{{ t('app.all_prism_tools') }}</button>
@@ -416,8 +473,8 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
         <dl class="controls-list">
           <div><dt><ButtonGlyph button="A" /></dt><dd>{{ t('controls.select') }}</dd></div>
           <div><dt><ButtonGlyph button="B" /></dt><dd>{{ t('controls.back') }}</dd></div>
-          <div><dt><ButtonGlyph button="X" /></dt><dd>{{ t('controls.configure') }}</dd></div>
-          <div><dt><ButtonGlyph button="Y" /></dt><dd>{{ t('controls.mods') }}</dd></div>
+          <div><dt><ButtonGlyph button="X" /></dt><dd>{{ t('controls.mods') }}</dd></div>
+          <div><dt><ButtonGlyph button="Y" /></dt><dd>{{ t('controls.worlds') }}</dd></div>
           <div><dt><ButtonGlyph button="LB" /><ButtonGlyph button="RB" /></dt><dd>{{ t('controls.tabs') }}</dd></div>
           <div><dt><ButtonGlyph button="Menu" /></dt><dd>{{ t('controls.menu') }}</dd></div>
           <div><dt><ButtonGlyph button="View" /></dt><dd>{{ t('controls.view') }}</dd></div>
@@ -428,42 +485,54 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
       </section>
     </main>
     <footer :inert="blocked">
-      <span class="hint"><ButtonGlyph button="A" /> {{ t('app.select') }}</span>
-      <span class="hint"><ButtonGlyph button="B" /> {{ t('app.back') }}</span>
-      <template v-if="tab === 'Library' && selected"><span class="hint"><ButtonGlyph button="X" /> {{ t('app.configure') }}</span><span class="hint"><ButtonGlyph button="Y" /> {{ t('app.mods_packs') }}</span></template>
-      <span class="hint"><ButtonGlyph button="Menu" /> {{ t('app.all_tools') }}</span>
       <span class="footer-status">
         <button v-if="launching && launchHidden === launching.id" class="status-chip" data-action="launch-show" @click="launchHidden = ''">{{ t('launch.chip', { name: launching.name, stage: t(`launch.stage.${stages[stageIndex]}`) }) }}<template v-if="launchPercent"> · {{ launchPercent }}%</template></button>
         <button v-if="state.task?.title" class="status-chip" @click="open('running')">{{ state.task.active ? t('app.working') : t('app.tasks') }}</button>
         <span v-if="!connected" class="disconnected">{{ t('app.not_connected_to_prism') }}</span>
       </span>
+      <template v-if="tab === 'Library'"><span v-if="selected" class="hint"><ButtonGlyph button="Menu" /> {{ t('app.instanceOptions') }}</span></template>
+      <template v-else-if="tab === 'Browse'"><span class="hint"><ButtonGlyph button="Y" /> {{ t('modpacks.search') }}</span><span class="hint"><span class="glyph">L2</span> {{ t('modpacks.filter.title') }}</span><span class="hint"><ButtonGlyph button="B" /> {{ t('nav.Library') }}</span></template>
+      <template v-else><span class="hint"><ButtonGlyph button="A" /> {{ t('app.select') }}</span><span class="hint"><ButtonGlyph button="B" /> {{ t('nav.Library') }}</span></template>
     </footer>
 
     <div v-if="overlay" ref="overlayRoot" class="launch-overlay" :class="{ failed: overlay === 'failed' }" role="dialog" aria-modal="true" aria-labelledby="launch-title" :inert="!!modal">
-      <div class="launch-backdrop" :style="{ backgroundImage: `url(${overlayInstance?.icon || fallbackIcon})` }" />
-      <div class="launch-card">
-        <img :src="overlayInstance?.icon || fallbackIcon" @error="iconError" alt="" class="launch-icon">
-        <p class="eyebrow">{{ overlay === 'failed' ? (launchFailure?.crashed ? t('launch.crashedEyebrow') : t('launch.failedEyebrow')) : t('launch.startingEyebrow') }}</p>
-        <h1 id="launch-title">{{ overlayInstance?.name || 'Minecraft' }}</h1>
+      <div class="launch-top"><strong class="wide">Prism Console</strong></div>
+      <section class="lib-hero launch-hero">
+        <div class="hero-info">
+          <h1 id="launch-title">{{ overlayInstance?.name || 'Minecraft' }}</h1>
+          <template v-if="overlay === 'launching'">
+            <p class="launch-step"><span aria-current="step">{{ t(`launch.stage.${stages[stageIndex]}`) }}</span><span class="dim"> · {{ t('launch.stepOf', { step: stageIndex + 1, total: stages.length }) }}</span></p>
+            <div class="launch-progress" :class="{ indeterminate: !launchPercent }"><span :style="{ width: launchPercent + '%' }" /></div>
+            <div class="launch-meta"><span role="status" class="launch-status">{{ tn(launchState?.status) || t('launch.preparing') }}</span><span class="launch-timing">{{ clock(elapsed) }}<template v-if="overlayInstance?.launchSeconds"> · {{ t('launch.usually', { seconds: overlayInstance.launchSeconds }) }}</template></span></div>
+            <p v-if="stalled" class="launch-stall" role="status">{{ stalled }}</p>
+          </template>
+          <template v-else>
+            <p class="launch-step failed-step">{{ launchFailure?.crashed ? t('launch.crashedEyebrow') : t('launch.failedEyebrow') }}</p>
+            <p role="alert" class="launch-status" :data-reason="failureReason.kind">{{ failureReason.text }}</p>
+          </template>
+        </div>
+        <PackArt :src="overlayInstance?.icon" :name="overlayInstance?.name || 'Minecraft'" :size="288" />
+      </section>
+      <section class="launch-activity">
         <template v-if="overlay === 'launching'">
-          <ol class="launch-steps" :aria-label="t('launch.stepsLabel')">
-            <li v-for="(stage, i) in stages" :key="stage" :class="{ done: i < stageIndex, current: i === stageIndex }" :aria-current="i === stageIndex ? 'step' : undefined">
-              <span class="step-mark" aria-hidden="true">{{ i < stageIndex ? '✓' : i + 1 }}</span>{{ t(`launch.stage.${stage}`) }}
-            </li>
-          </ol>
-          <p role="status" class="launch-status">{{ tn(launchState?.status) || t('launch.preparing') }}</p>
-          <div class="launch-progress" :class="{ indeterminate: !launchPercent }"><span :style="{ width: launchPercent + '%' }" /></div>
-          <p class="launch-timing">{{ clock(elapsed) }}<template v-if="overlayInstance?.launchSeconds"> · {{ t('launch.usually', { seconds: overlayInstance.launchSeconds }) }}</template></p>
-          <p v-if="stalled" class="launch-stall" role="status">{{ stalled }}</p>
-          <div class="actions"><button data-action="launch-hide" @click="hideLaunch">{{ t('launch.backToLibrary') }}</button><button data-action="launch-log" @click="launchLog">{{ t('launch.showLog') }}</button><button data-action="launch-cancel" @click="action('cancelLaunch', { id: launching!.id })">{{ t('launch.cancel') }}</button></div>
-          <p class="launch-hint"><ButtonGlyph button="View" /><ButtonGlyph button="Menu" /> {{ t('launch.chordHint') }}</p>
+          <h2>{{ t('launch.activity') }}</h2>
+          <ol><li v-for="(item, i) in activity" :key="i" :class="{ current: i === activity.length - 1 }"><span class="time">{{ clock(item.at) }}</span><span>{{ item.text }}</span></li></ol>
+        </template>
+        <pre v-else-if="launchFailure?.crashed && launchFailure.logTail.length" class="launch-tail" tabindex="0" :aria-label="t('launch.lastLogLines')">{{ launchFailure.logTail.join('\n') }}</pre>
+      </section>
+      <footer class="launch-footer">
+        <span v-if="overlay === 'launching'" class="launch-hint">{{ t('launch.chordHint') }}</span>
+        <template v-if="overlay === 'launching'">
+          <button class="hint" data-action="launch-hide" @click="hideLaunch"><ButtonGlyph button="B" />{{ t('nav.Library') }}</button>
+          <button class="hint" data-action="launch-log" @click="launchLog"><ButtonGlyph button="Y" />{{ t('launch.log') }}</button>
+          <button class="hint" data-action="launch-cancel" @click="open('cancel-launch')"><ButtonGlyph button="X" />{{ t('launch.cancelShort') }}</button>
         </template>
         <template v-else>
-          <p role="alert" class="launch-status" :data-reason="failureReason.kind">{{ failureReason.text }}</p>
-          <pre v-if="launchFailure?.crashed && launchFailure.logTail.length" class="launch-tail" tabindex="0" :aria-label="t('launch.lastLogLines')">{{ launchFailure.logTail.join('\n') }}</pre>
-          <div class="actions"><button class="primary" data-action="launch-retry" :disabled="busy" @click="retryLaunch">{{ t('launch.tryAgain') }}</button><button data-action="launch-log" @click="launchLog">{{ t('launch.showLog') }}</button><button data-action="launch-close" @click="launchFailure = null">{{ t('common.close') }}</button></div>
+          <button class="hint" data-action="launch-retry" :disabled="busy" @click="retryLaunch"><ButtonGlyph button="A" accent />{{ t('launch.tryAgain') }}</button>
+          <button class="hint" data-action="launch-log" @click="launchLog"><ButtonGlyph button="Y" />{{ t('launch.log') }}</button>
+          <button class="hint" data-action="launch-close" @click="launchFailure = null"><ButtonGlyph button="B" />{{ t('common.close') }}</button>
         </template>
-      </div>
+      </footer>
     </div>
 
     <div v-if="modal" class="modal-scrim" :class="{ compact }"><section ref="modalRoot" role="dialog" aria-modal="true" aria-labelledby="dialog-title" class="dialog" :class="{ 'dialog-compact': compact }">
@@ -478,7 +547,6 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
         <WorldsPage v-else-if="modal === 'worlds'" :instance-id="selectedId" :running="!!selected?.running" :busy="busy || !!state.task?.active" @play="close(); action('launch', { id: selectedId, ...$event })" @error="error = $event" />
         <Workflows v-else-if="['import', 'preferences', 'advanced', 'versions', 'notes', 'export', 'copy'].includes(modal)" :mode="modal" :instance-id="selectedId" @changed="refresh" />
         <Catalog v-else-if="modal === 'catalog'" :instance-id="selectedId" :kind="kind" />
-        <ModpackBrowser v-else-if="modal === 'modpacks'" :state="modpacks" :busy="busy || !!state.task?.active" @installed="close(); refresh()" @error="error = $event" />
         <template v-else-if="modal === 'logs'">
           <p role="status">{{ tn(state.launches?.[selectedId]?.status) }}</p>
           <button v-if="selected?.launching" @click="action('cancelLaunch', { id: selectedId })">{{ t('launch.cancel') }}</button>
@@ -489,7 +557,7 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
           <div class="version-list" :aria-label="t('app.minecraft_versions')"><button v-for="v in state.versions" :key="v" :aria-pressed="newVersion === v" @click="newVersion = v">{{ v }}</button></div>
           <p v-if="state.task?.title" role="status">{{ state.task.title }}: {{ state.task.status }}</p>
           <div class="actions"><button class="primary" :disabled="busy || state.task?.active || !newName.trim() || !newVersion" @click="action('createInstance', { name: newName, version: newVersion })">{{ t('app.create_vanilla_instance') }}</button>
-          <button @click="modal = 'modpacks'; refresh()">{{ t('app.browse_modrinth_modpacks') }}</button><button @click="modal = 'import'">{{ t('app.import_modpack_file') }}</button><button @click="action('nativeDialog', { route: 'add' })">{{ t('app.other_modpack_providers') }}</button></div>
+          <button @click="open('modpacks')">{{ t('app.browse_modrinth_modpacks') }}</button><button @click="modal = 'import'">{{ t('app.import_modpack_file') }}</button><button @click="action('nativeDialog', { route: 'add' })">{{ t('app.other_modpack_providers') }}</button></div>
         </template>
         <template v-else-if="modal === 'resources'">
           <div class="actions" role="tablist"><button v-for="k in ['mods', 'resourcepacks', 'shaderpacks']" :key="k" :aria-pressed="kind === k" @click="kind = k; loadResources()">{{ t(`app.kind.${k}` as MessageKey) }}</button><button @click="loadResources">{{ t('app.refresh') }}</button></div>
@@ -510,6 +578,7 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
           <h3 class="section-title">{{ t('app.more') }}</h3>
           <div class="actions"><button data-action="add-to-steam" :disabled="busy || state.task?.active" @click="action('addToSteam', { id: selectedId })">{{ selected?.steamAppId ? t('app.updateSteamTile') : t('app.addToSteam') }}</button><button @click="modal = 'copy'">{{ t('app.copy_instance') }}</button><button @click="modal = 'worlds'">{{ t('app.worlds') }}</button><button @click="modal = 'notes'">{{ t('app.notes') }}</button><button @click="modal = 'export'">{{ t('app.export_instance') }}</button><button @click="action('instanceDialog', { id: selectedId, page: 'version' })">{{ t('app.full_instance_editor') }}</button><button @click="open('commands')">{{ t('app.all_instance_tools') }}</button></div>
         </template>
+        <template v-else-if="modal === 'cancel-launch'"><p>{{ t('launch.cancelQuestion', { name: launching?.name || 'Minecraft' }) }}</p><div class="actions"><button @click="close">{{ t('launch.keepStarting') }}</button><button data-action="confirm-cancel-launch" :disabled="busy || !launching" @click="action('cancelLaunch', { id: launching!.id }); close()">{{ t('launch.cancelShort') }}</button></div></template>
         <template v-else-if="modal === 'stop'"><p>{{ t('app.this_closes_the_game_immediately') }}</p><div class="actions"><button @click="close">{{ t('app.keep_playing') }}</button><button data-action="confirm-stop" :disabled="busy" @click="action('stop', { id: selectedId }); close()">{{ t('app.stop_game') }}</button></div></template>
         <template v-else><section v-if="state.task?.title"><h3>{{ state.task.title }}</h3><p role="status">{{ tn(state.task.status) }}</p><button v-if="state.task.active" @click="action('cancelTask')">{{ t('app.cancel_task') }}</button><progress v-if="state.task.active" :value="state.task.total ? state.task.current : undefined" :max="state.task.total || 1" /></section><p v-if="!state.instances.some(i => i.running)">{{ t('app.no_games_are_running') }}</p><div class="row" v-for="i in state.instances.filter(i => i.running)" :key="i.id">{{ i.name }}</div></template>
       </div>

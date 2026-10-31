@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Library requests from the console renderer. Registered by ConsoleBridge; bodies run on the GUI thread.
+#include <algorithm>
 #include "ConsoleBridge.h"
 #include "ConsoleBridgeSupport.h"
 #include "minecraft/launch/MinecraftTarget.h"
@@ -91,8 +92,23 @@ void ConsoleBridge::registerLibraryHandlers()
             // Encoded once per icon; QIcon::cacheKey changes when the icon itself changes.
             const auto icon = APPLICATION->icons()->getIcon(inst->iconKey());
             auto& cached = m_instanceIcons[inst->iconKey()];
-            if (cached.first != icon.cacheKey() || cached.second.isEmpty())
-                cached = {icon.cacheKey(), imageDataUrl(icon.pixmap(128, 128).toImage())};
+            if (cached.first != icon.cacheKey() || cached.second.isEmpty()) {
+                // At the icon's own size (pixel art stays pixel art; the renderer scales it with hard edges),
+                // capped at 256 px.
+                QSize size(128, 128);
+                if (const auto sizes = icon.availableSizes(); !sizes.isEmpty())
+                    size = *std::max_element(sizes.begin(), sizes.end(), [](const QSize& a, const QSize& b) { return a.width() < b.width(); });
+                if (size.width() > 256 || size.height() > 256) size.scale(256, 256, Qt::KeepAspectRatio);
+                cached = {icon.cacheKey(), imageDataUrl(icon.pixmap(size).toImage())};
+            }
+            // The mod loader shown with the Minecraft version ("NeoForge 21.1.252").
+            QString loader;
+            for (const auto& [uid, label] : std::initializer_list<std::pair<const char*, const char*>>{
+                     {"net.neoforged", "NeoForge"}, {"net.minecraftforge", "Forge"}, {"net.fabricmc.fabric-loader", "Fabric"}, {"org.quiltmc.quilt-loader", "Quilt"}})
+                if (const auto component = inst->getPackProfile()->getComponent(uid)) {
+                    loader = QString("%1 %2").arg(label, component->getVersion().isEmpty() ? component->m_version : component->getVersion()).trimmed();
+                    break;
+                }
             // Prism marks an instance running when its launch task starts, before library/asset checks and
             // before Java exists. The launch counts as started only once the game process has a PID.
             const bool launchActive = APPLICATION->instanceLaunchActive(inst->id());
@@ -106,7 +122,7 @@ void ConsoleBridge::registerLibraryHandlers()
             instances.append(QVariantMap{
                 {"id", inst->id()}, {"name", inst->name()}, {"group", list->getInstanceGroup(inst->id())},
                 {"icon", cached.second},
-                {"version", version},
+                {"version", version}, {"loader", loader},
                 {"running", inst->isRunning()}, {"launching", launching},
                 {"canLaunch", inst->canLaunch() && !launchActive}, {"notes", inst->notes()},
                 {"minMemory", inst->settings()->get("MinMemAlloc").toInt()}, {"maxMemory", inst->settings()->get("MaxMemAlloc").toInt()},

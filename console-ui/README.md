@@ -8,10 +8,11 @@ The native process is Prism Launcher; the visible console interface is Vue,
 using controller navigation and styling from XMCL PR #1790. No XMCL backend
 or PiLauncher backend is used. See UPSTREAM.md for exact revisions and notices.
 
-The console renderer uses an adaptation of the Ore UI – Dark Emerald Prism theme: original nine-slice button assets,
-charcoal surfaces, emerald actions, square panels, and high-contrast focus.
-It is a bundled web adaptation, not a Qt stylesheet loaded into WebEngine.
-Original theme assets/notices are in `src/oreui`; adaptation is `src/oreui.css`.
+The look ("display case") lives in `src/theme.css` and `src/console.css`: warm graphite surfaces, Archivo,
+one accent kept for the primary controller action, and one white focus ring. Each pack's own icon is its artwork
+(`src/PackArt.vue`): icons of 64 px or less are scaled by whole numbers with hard pixels, larger ones are fitted
+without cropping, and a pack without an icon gets its initial. Design mockups can be rendered for review with
+`node artifacts/dc-render.mjs <out-dir> <file.dc.html>...`.
 
 ## Build
 

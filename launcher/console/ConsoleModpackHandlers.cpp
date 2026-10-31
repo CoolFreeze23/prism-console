@@ -187,7 +187,8 @@ void ConsoleBridge::registerModpackHandlers()
                                          { "author", hit.value("author").toString() },
                                          { "downloads", hit.value("downloads").toDouble() },
                                          { "categories", hit.value("display_categories").toVariant() },
-                                         { "minecraft", gameVersions.isEmpty() ? QString() : gameVersions.last().toString() } });
+                                         { "minecraft", gameVersions.isEmpty() ? QString() : gameVersions.last().toString() },
+                                         { "updated", hit.value("date_modified").toString() } });
                 fetchModpackIcon(id, QUrl(hit.value("icon_url").toString()));
             }
             m_modpacks["hits"] = hits;

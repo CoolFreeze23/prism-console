@@ -1,0 +1,85 @@
+/* Prism Console theme ("display case"): warm graphite surfaces, Archivo, one accent kept for the primary
+ * controller action, one white focus ring. Raised surfaces are lighter, never shadowed.
+ * The --ore-* names are kept as aliases so every page follows the theme. */
+:root {
+  --pc-bg: #121314;
+  --pc-surface: #1b1c1e;
+  --pc-raised: #242528;
+  --pc-hover: #2c2e31;
+  --pc-line: #34363a;
+  --pc-text: #f1efea;
+  --pc-text-2: #b4b1aa;
+  --pc-text-3: #8a8781;
+  --pc-accent: #62c554;
+  --pc-on-accent: #0e1a0b;
+  --pc-danger: #ff9a8c;
+  --pc-radius: 4px;
+  --ore-base: var(--pc-bg);
+  --ore-panel: var(--pc-surface);
+  --ore-button: var(--pc-raised);
+  --ore-hover: var(--pc-hover);
+  --ore-accent: var(--pc-accent);
+  --ore-accent-hover: #74d066;
+  --ore-muted: var(--pc-text-2);
+  --v-theme-primary: 98, 197, 84;
+  font-family: 'Archivo Variable', system-ui, sans-serif;
+  color-scheme: dark;
+}
+body, .bp-container { background: var(--pc-bg); color: var(--pc-text); }
+.bp-ambient-glow { display: none; }
+h1, h2, .wide { font-stretch: 112%; }
+h1 { font-weight: 700; letter-spacing: -.01em; text-shadow: none; }
+h2 { font-weight: 650; }
+
+button, .bp-nav-btn {
+  border: 0;
+  border-image: none;
+  border-radius: var(--pc-radius);
+  background: var(--pc-raised);
+  color: var(--pc-text);
+  padding: 10px 18px;
+  min-height: 48px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background-color 100ms ease, transform 120ms ease-out;
+}
+button:hover:not(:disabled) { background: var(--pc-hover); }
+button.primary { background: var(--pc-accent); color: var(--pc-on-accent); font-weight: 700; }
+button.primary:hover:not(:disabled) { background: var(--ore-accent-hover); }
+/* Selected (not focused): a quiet outline, never the accent. */
+button[aria-pressed=true] { background: var(--pc-hover); box-shadow: inset 0 0 0 2px var(--pc-text-2); color: var(--pc-text); }
+button:active:not(:disabled) { filter: brightness(.9); }
+button:disabled { opacity: .45; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .gamepad-focus {
+  outline: 3px solid var(--pc-text) !important;
+  outline-offset: 3px;
+  box-shadow: none !important;
+}
+input, textarea, select {
+  border: 0;
+  border-radius: var(--pc-radius);
+  background: var(--pc-surface);
+  box-shadow: inset 0 0 0 1px var(--pc-line);
+  color: var(--pc-text);
+  min-height: 48px;
+}
+input:focus { box-shadow: inset 0 0 0 1px var(--pc-text-2); }
+textarea { font: inherit; width: 100%; padding: 12px; resize: vertical; }
+
+.muted, .instance-card span, .row small, .connection, .library-toolbar h2 span { color: var(--pc-text-2); }
+.eyebrow { color: var(--pc-text-3); font-weight: 600; letter-spacing: 0; text-transform: none; }
+.bp-chip { border-radius: var(--pc-radius); background: var(--pc-raised); border: 0; color: var(--pc-text); }
+kbd { background: var(--pc-surface); border: 1px solid var(--pc-line); border-radius: 3px; }
+.login-state { background: var(--pc-surface); padding: 16px 24px; border-left: 3px solid var(--pc-text-2); }
+.device-code { color: var(--pc-text); }
+progress { width: 100%; height: 8px; accent-color: var(--pc-text); }
+.launch-log { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow: auto; background: var(--pc-surface); padding: 16px; user-select: text; font-size: 15px; }
+.preferences-list { max-height: 50vh; overflow: auto; padding: 8px; margin-bottom: 20px; }
+.workflow-error { color: var(--pc-danger); }
+.error { background: #4a2420; border-bottom: 1px solid var(--pc-danger); }
+* { scrollbar-width: thin; scrollbar-color: var(--pc-line) transparent; }
+
+/* Controller button glyphs used in hints: always round. */
+.pc-glyph { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--pc-line); color: var(--pc-text); font-size: 15px; font-weight: 800; line-height: 1; }
+.pc-glyph.accent { background: var(--pc-accent); color: var(--pc-on-accent); }
+.pc-glyph.large { width: 40px; height: 40px; font-size: 18px; }

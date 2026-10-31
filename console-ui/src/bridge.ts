@@ -1,5 +1,6 @@
 export interface Instance {
   id: string; name: string; group: string; icon: string; version: string;
+  /** Mod loader and its version, e.g. "NeoForge 21.1.252"; empty for vanilla. */ loader?: string
   running: boolean; launching: boolean; canLaunch: boolean; notes: string; minMemory: number; maxMemory: number
   /** Epoch milliseconds of the last launch, 0 if never. */ lastLaunch?: number
   /** Total seconds played. */ playTime?: number
@@ -9,7 +10,7 @@ export interface Instance {
 }
 export interface Account { id: string; name: string; selected: boolean }
 export interface Resource { id: string; name: string; version: string; enabled: boolean }
-export interface ModpackHit { id: string; slug: string; title: string; description: string; author: string; downloads: number; categories?: string[]; minecraft: string; hasIcon?: boolean }
+export interface ModpackHit { id: string; slug: string; title: string; description: string; author: string; downloads: number; categories?: string[]; minecraft: string; hasIcon?: boolean; /** ISO date of the last update. */ updated?: string }
 export interface ModpackRelease { id: string; name: string; number: string; type: string; minecraft: string[]; loaders: string[]; published: string; size: number }
 export interface ModpackState {
   query?: string; loading?: boolean; error?: string; total?: number; hits?: ModpackHit[]
