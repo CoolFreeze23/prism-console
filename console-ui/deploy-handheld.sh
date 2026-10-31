@@ -14,6 +14,19 @@ ssh="ssh -o BatchMode=yes -o ConnectTimeout=8 $target"
 
 test -f console-ui/dist/index.html || { echo 'Build the UI first: (cd console-ui && pnpm build)'; exit 1; }
 
+# Never replace a newer install with an older tree: the handheld records the commit each deploy built, and a
+# deploy goes ahead only when that commit is part of this tree's history (PRISM_CONSOLE_DEPLOY_OLDER=1 overrides).
+commit=$(git rev-parse HEAD)
+[ -z "$(git status --porcelain --untracked-files=no)" ] || commit="$commit+changes"
+installed_commit=$($ssh "cat $apps/prism-console-deployed-commit 2>/dev/null || true")
+if [ -n "$installed_commit" ] && [ "${PRISM_CONSOLE_DEPLOY_OLDER:-}" != 1 ]; then
+  base=${installed_commit%+changes}
+  if ! git merge-base --is-ancestor "$base" HEAD 2>/dev/null; then
+    echo "The handheld has $installed_commit installed, which this tree does not contain. Merge it first,"
+    echo "or set PRISM_CONSOLE_DEPLOY_OLDER=1 to replace it anyway."; exit 1
+  fi
+fi
+
 # Never compete with a game or drain a low battery: a full build runs four compiler jobs.
 $ssh 'set -eu
   if pgrep -x java >/dev/null; then echo "Minecraft is running; try again after closing it."; exit 1; fi
@@ -65,4 +78,5 @@ $ssh "set -eu
   installed=\$(flatpak info --show-location io.github.CoolFreeze23.PrismConsole)
   cmp prism-console-build/files/bin/prismlauncher \$installed/files/bin/prismlauncher
   sha256sum \$installed/files/bin/prismlauncher
-  echo 'Installed. Previous binary kept at' $apps/\$previous"
+  echo $commit > $apps/prism-console-deployed-commit
+  echo 'Installed $commit. Previous binary kept at' $apps/\$previous"
