@@ -33,7 +33,7 @@ for _ in range(60):
     if js("document.querySelector('.bp-container')?.dataset.connected === 'true'"): break
     time.sleep(0.5)
 time.sleep(2)
-js("[...document.querySelectorAll('.instance-card')].find(c => c.textContent.includes('CrazyCraft'))?.click()")
+js("document.querySelector('.instance-card[data-id=CrazyCraft5]')?.click()")
 time.sleep(0.5)
 print('Opened Configure:', js("(() => { const b = document.querySelector('[data-action=configure]'); b?.click(); return !!b })()"))
 time.sleep(1)

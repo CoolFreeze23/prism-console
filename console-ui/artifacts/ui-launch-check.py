@@ -89,8 +89,9 @@ time.sleep(2)
 environment_report()
 if js("!!document.querySelector('[role=dialog] #dialog-title')?.textContent.includes('Welcome')"):
     print('Onboarding shown; keeping existing settings:', click('Keep current settings')); time.sleep(1)
-# Picking a pack is one tap; a tap on the pack that is already picked would play it.
-print('Selected CrazyCraft card:', js("(() => { const c = [...document.querySelectorAll('.instance-card')].find(c => c.textContent.includes('CrazyCraft')); if (c && !c.classList.contains('selected')) c.click(); return !!c })()"))
+# Picking a pack is one tap; a tap on the pack that is already picked would play it. The pack is the CrazyCraft5
+# instance by ID: other CrazyCraft builds (an Alpha, say) can sit beside it with similar names.
+print('Selected CrazyCraft card:', js("(() => { const c = document.querySelector('.instance-card[data-id=CrazyCraft5]'); if (c && !c.classList.contains('selected')) c.click(); return !!c })()"))
 time.sleep(1)
 ui_shot('1-library')
 pad = VirtualPad()

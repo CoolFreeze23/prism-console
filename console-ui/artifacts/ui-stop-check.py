@@ -54,7 +54,7 @@ else:
 time.sleep(2)
 if js("!!document.querySelector('[role=dialog] #dialog-title')?.textContent.includes('Welcome')"):
     js("[...document.querySelectorAll('button')].find(b => b.textContent.includes('Keep current settings'))?.click()"); time.sleep(1)
-print('Selected CrazyCraft card:', js("(() => { const c = [...document.querySelectorAll('.instance-card')].find(c => c.textContent.includes('CrazyCraft')); if (c && !c.classList.contains('selected')) c.click(); return !!c })()"))
+print('Selected CrazyCraft card:', js("(() => { const c = document.querySelector('.instance-card[data-id=CrazyCraft5]'); if (c && !c.classList.contains('selected')) c.click(); return !!c })()"))
 time.sleep(1)
 print('Opened worlds:', press('[data-action=worlds]')); time.sleep(2)
 print('Chose the world copy:', press(f'.world-row[data-world="{world}"]')); time.sleep(1)
