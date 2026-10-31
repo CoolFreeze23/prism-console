@@ -201,6 +201,7 @@ class Application : public QApplication {
     void updateAllowedChanged(bool status);
     void globalSettingsAboutToOpen();
     void globalSettingsApplied();
+    void consoleLaunchCreated(LaunchController* controller);
     int currentCatChanged(int index);
 
     void oauthReplyRecieved(QVariantMap);
@@ -216,6 +217,7 @@ class Application : public QApplication {
                 shared_qobject_ptr<MinecraftAccount> accountToUse = nullptr,
                 const QString& offlineName = QString());
     bool kill(BaseInstance* instance);
+    bool instanceLaunchActive(const QString& id) const;
     static void closeCurrentWindow();
 
    private slots:

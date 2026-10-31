@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.CoolFreeze23.PrismConsole</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Prism Console</name>
+  <summary>Controller-first Minecraft launcher for SteamOS Gaming Mode</summary>
+  <developer id="io.github.CoolFreeze23">
+    <name>CoolFreeze23</name>
+  </developer>
+  <description>
+    <p>
+      Prism Console is an unofficial fork of Prism Launcher with a full-screen interface made for handhelds
+      and the couch: everything works with a controller, inside SteamOS Gaming Mode, without the desktop.
+    </p>
+    <ul>
+      <li>Browse and install Modrinth modpacks, update mods, and turn mods and packs on or off</li>
+      <li>Play straight into a world or server, with a clear launch screen that never looks stuck</li>
+      <li>Switch between the game and the launcher by holding View and Menu</li>
+      <li>Add any instance to Steam as its own tile, with artwork</li>
+      <li>English and Brazilian Portuguese</li>
+    </ul>
+    <p>
+      Prism Console is not Prism Launcher and is not endorsed by or affiliated with the Prism Launcher project.
+      Minecraft is a trademark of Mojang; this project is not affiliated with Mojang or Microsoft.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.CoolFreeze23.PrismConsole.desktop</launchable>
+  <url type="homepage">https://github.com/CoolFreeze23/prism-console</url>
+  <url type="bugtracker">https://github.com/CoolFreeze23/prism-console/issues</url>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>gamepad</control>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <releases>
+    <release version="0.1.0" date="2026-10-31"/>
+  </releases>
+</component>

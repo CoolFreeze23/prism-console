@@ -168,7 +168,20 @@ void ConcurrentTask::startSubTask(Task::Ptr next)
 
     updateState();
 
-    QMetaObject::invokeMethod(next.get(), &Task::start, Qt::QueuedConnection);
+    // Metadata tasks may be shared by several version lists. Check when the
+    // queued callback runs, since another owner can start or finish them first.
+    QMetaObject::invokeMethod(this, [this, next]() {
+        if (!isRunning() || !m_doing.contains(next.get()))
+            return;
+        if (next->isFinished()) {
+            if (next->wasSuccessful())
+                subTaskSucceeded(next);
+            else
+                subTaskFailed(next, next->failReason());
+        } else if (!next->isRunning()) {
+            next->start();
+        }
+    }, Qt::QueuedConnection);
 }
 
 void ConcurrentTask::subTaskFinished(Task::Ptr task, TaskStepState state)

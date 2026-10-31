@@ -1,0 +1,78 @@
+# Flatpak build of Prism Console. Build the interface first (cd console-ui && pnpm install --frozen-lockfile && pnpm build),
+# then: flatpak-builder --user --install-deps-from=flathub --repo=repo build flatpak/io.github.CoolFreeze23.PrismConsole.yml
+# Microsoft sign-in needs a client ID of your own: replace @MSA_CLIENT_ID@ below (see console-ui/docs/MICROSOFT-SIGN-IN.md).
+# Left as is, the placeholder is dropped and the build has Microsoft sign-in turned off.
+id: io.github.CoolFreeze23.PrismConsole
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+base: io.qt.qtwebengine.BaseApp
+base-version: '6.10'
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk17
+command: prism-console
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=pulseaudio
+  # Controllers (the View + Menu chord reads Steam's virtual pad) and GPU access for the game.
+  - --device=all
+  - --filesystem=xdg-download
+  - --filesystem=xdg-config/kdeglobals:ro
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --talk-name=org.kde.kconfig.notify
+  - --talk-name=org.kde.KGlobalSettings
+build-options:
+  append-path: /usr/lib/sdk/openjdk17/bin
+  env:
+    CMAKE_PREFIX_PATH: /app:/app/lib/x86_64-linux-gnu/cmake
+    PKG_CONFIG_PATH: /app/lib/pkgconfig:/app/lib/x86_64-linux-gnu/pkgconfig
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/man
+modules:
+  - name: cmark
+    buildsystem: cmake-ninja
+    config-opts: [-DCMARK_TESTS=OFF, -DCMARK_STATIC=OFF]
+    sources:
+      - type: git
+        url: https://github.com/commonmark/cmark.git
+        tag: 0.31.1
+        commit: bb3678d7a73cb02d35c8876ecd097072636200a8
+
+  - name: tomlplusplus
+    buildsystem: cmake-ninja
+    config-opts: [-DTOML_BUILD_TESTS=OFF, -DTOML_BUILD_EXAMPLES=OFF]
+    sources:
+      - type: git
+        url: https://github.com/marzer/tomlplusplus.git
+        tag: v3.4.0
+        commit: 30172438cee64926dc41fdd9c11fb3ba5b2ba9de
+
+  - name: prism-console
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DLauncher_CONSOLE_UI=ON
+      - -DLauncher_ENABLE_UPDATER=OFF
+      - -DLauncher_BUILD_PLATFORM=flatpak
+      - -DBUILD_TESTING=OFF
+      - -DLauncher_CURSEFORGE_API_KEY=
+      - -DLauncher_MSA_CLIENT_ID=@MSA_CLIENT_ID@
+      - -DJava_JAVAC_EXECUTABLE=/usr/lib/sdk/openjdk17/bin/javac
+      - -DJava_JAVA_EXECUTABLE=/usr/lib/sdk/openjdk17/bin/java
+    sources:
+      - type: dir
+        path: ..
+        skip: [.git, build, repo, .flatpak-builder, console-ui/node_modules, console-ui/artifacts, cmake/vcpkg]
+    post-install:
+      - install -Dm755 console-ui/steamos/prism-console /app/bin/prism-console
+      - install -Dm644 console-ui/steamos/io.github.CoolFreeze23.PrismConsole.desktop /app/share/applications/io.github.CoolFreeze23.PrismConsole.desktop
+      - install -Dm644 console-ui/steamos/io.github.CoolFreeze23.PrismConsole.svg /app/share/icons/hicolor/scalable/apps/io.github.CoolFreeze23.PrismConsole.svg
+      - install -Dm644 console-ui/steamos/io.github.CoolFreeze23.PrismConsole.metainfo.xml /app/share/metainfo/io.github.CoolFreeze23.PrismConsole.metainfo.xml
+      # Prism's own desktop entry, icons and metainfo would show a second "Prism Launcher" app.
+      - rm -f /app/share/applications/org.prismlauncher.PrismLauncher.desktop /app/share/metainfo/org.prismlauncher.PrismLauncher.metainfo.xml
+      - rm -f /app/share/icons/hicolor/*/apps/org.prismlauncher.PrismLauncher.* /app/share/mime/packages/modrinth-mrpack-mime.xml

@@ -17,6 +17,7 @@
  */
 
 #include "SkinManageDialog.h"
+#include "console/ConsoleMode.h"
 #include "net/RPCSink.h"
 #include "ui/dialogs/skins/draw/SkinOpenGLWindow.h"
 #include "ui_SkinManageDialog.h"
@@ -56,7 +57,7 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct)
 {
     m_ui->setupUi(this);
 
-    if (SkinOpenGLWindow::hasOpenGL()) {
+    if (!consoleMode() && SkinOpenGLWindow::hasOpenGL()) {
         m_skinPreview = new SkinOpenGLWindow(this, palette().color(QPalette::Normal, QPalette::Base));
     } else {
         m_skinPreviewLabel = new QLabel(this);

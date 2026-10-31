@@ -88,6 +88,33 @@ class TaskTest : public QObject {
     Q_OBJECT
 
    private slots:
+    void test_sharedSubTask()
+    {
+        auto shared = makeShared<BasicTask_MultiStep>();
+        SequentialTask first("first"), second("second");
+        first.addTask(shared);
+        second.addTask(shared);
+        first.start();
+        second.start();
+        QVERIFY(QTest::qWaitFor([&] { return shared->isRunning(); }, 1000));
+        QCoreApplication::processEvents();
+        shared->emitSucceeded();
+        QVERIFY(QTest::qWaitFor([&] { return first.isFinished() && second.isFinished(); }, 1000));
+        QVERIFY(first.wasSuccessful());
+        QVERIFY(second.wasSuccessful());
+    }
+
+    void test_completedSharedSubTask()
+    {
+        auto shared = makeShared<BasicTask>();
+        shared->start();
+        SequentialTask parent("finished child");
+        parent.addTask(shared);
+        parent.start();
+        QVERIFY(QTest::qWaitFor([&] { return parent.isFinished(); }, 1000));
+        QVERIFY(parent.wasSuccessful());
+    }
+
     void test_SetStatus_NoMultiStep()
     {
         BasicTask t;

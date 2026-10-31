@@ -39,6 +39,7 @@
  */
 
 #include "Application.h"
+#include "console/ConsoleMode.h"
 #include "BuildConfig.h"
 #include "FileSystem.h"
 
@@ -1564,7 +1565,18 @@ void MainWindow::on_actionExportInstanceFlamePack_triggered()
 void MainWindow::on_actionRenameInstance_triggered()
 {
     if (m_selectedInstance) {
-        view->edit(view->currentIndex());
+        if (consoleMode()) {
+            // Inline editing belongs to the hidden desktop library. Use a
+            // dialog so the console workflow renderer can present this action.
+            const QPersistentModelIndex index(view->currentIndex());
+            bool accepted = false;
+            auto name = QInputDialog::getText(this, tr("Rename instance"), tr("Name"),
+                                            QLineEdit::Normal, m_selectedInstance->name(), &accepted).trimmed();
+            if (accepted && !name.isEmpty() && index.isValid())
+                view->model()->setData(index, name, Qt::EditRole);
+        } else {
+            view->edit(view->currentIndex());
+        }
     }
 }
 

@@ -1,0 +1,4 @@
+FROM archlinux:base-devel
+RUN pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-networkauth qt6-webengine qt6-webchannel extra-cmake-modules cmark qrencode libarchive tomlplusplus zlib jdk17-openjdk git xorg-server-xvfb
+WORKDIR /src
+CMD ["sh", "-c", "cmake -S /src -B /build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLauncher_CONSOLE_UI=ON -DLauncher_ENABLE_UPDATER=OFF -DBUILD_TESTING=OFF -DLauncher_CURSEFORGE_API_KEY= && cmake --build /build -j2"]

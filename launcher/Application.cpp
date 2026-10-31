@@ -41,6 +41,7 @@
  */
 
 #include "Application.h"
+#include "console/ConsoleMode.h"
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
@@ -50,6 +51,9 @@
 #include "tools/GenericProfiler.h"
 #include "ui/InstanceWindow.h"
 #include "ui/MainWindow.h"
+#ifdef PRISM_CONSOLE_UI
+#include "console/ConsoleBridge.h"
+#endif
 #include "ui/ToolTipFilter.h"
 #include "ui/ViewLogWindow.h"
 
@@ -1242,6 +1246,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
 bool Application::createSetupWizard()
 {
+#ifdef PRISM_CONSOLE_UI
+    if (consoleMode()) {
+        // The bundled controller UI owns onboarding. Do not run a blocking
+        // desktop wizard before the web view and its bridge exist.
+        settings()->registerSetting("ConsoleSetupComplete", false);
+        return false;
+    }
+#endif
     bool javaRequired = [this]() {
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
             return false;
@@ -1267,6 +1279,10 @@ bool Application::createSetupWizard()
     bool validWidgets = m_themeManager->isValidApplicationTheme(settings()->get("ApplicationTheme").toString());
     bool validIcons = m_themeManager->isValidIconTheme(settings()->get("IconTheme").toString());
     bool login = !m_accounts->anyAccountIsValid() && (capabilities().testAnyFlags(Application::SupportsMSA));
+#ifdef PRISM_CONSOLE_UI
+    // Console mode exposes Prism's device-code flow in its Accounts page.
+    if (consoleMode()) login = false;
+#endif
     bool themeInterventionRequired = !validWidgets || !validIcons;
     bool wizardRequired = javaRequired || languageRequired || pasteInterventionRequired || themeInterventionRequired || askjava || login;
     if (wizardRequired) {
@@ -1372,6 +1388,12 @@ bool Application::event(QEvent* event)
 void Application::performMainStartupAction()
 {
     m_status = Application::Initialized;
+#ifdef PRISM_CONSOLE_UI
+    // CLI launches and import actions can open dialogs before the normal main
+    // window path. Install the controller bridge before any of those actions.
+    if (consoleMode())
+        showMainWindow(false);
+#endif
     if (!m_instanceIdToLaunch.isEmpty()) {
         auto* inst = instances()->getInstanceById(m_instanceIdToLaunch);
         if (inst) {
@@ -1591,6 +1613,7 @@ bool Application::launch(MinecraftInstance* instance,
             controller->setParentWidget(m_mainWindow);
         }
         connect(controller.get(), &LaunchController::finished, this, &Application::controllerFinished);
+        emit consoleLaunchCreated(controller.get());
         addRunningInstance();
         QMetaObject::invokeMethod(controller.get(), &Task::start, Qt::QueuedConnection);
         return true;
@@ -1602,6 +1625,13 @@ bool Application::launch(MinecraftInstance* instance,
         return true;
     }
     return false;
+}
+
+bool Application::instanceLaunchActive(const QString& id) const
+{
+    QMutexLocker locker(&m_instanceExtrasMutex);
+    const auto it = m_instanceExtras.find(id);
+    return it != m_instanceExtras.end() && it->second.controller != nullptr;
 }
 
 bool Application::kill(BaseInstance* instance)
@@ -1684,6 +1714,19 @@ void Application::controllerFinished()
     extras.controller.reset();
     subRunningInstance();
 
+#ifdef PRISM_CONSOLE_UI
+    // A Steam tile launched this instance directly: hand control back to Steam after a normal exit.
+    // A failed launch stays open so the console UI can show what went wrong.
+    if (consoleMode() && id == m_instanceIdToLaunch) {
+        m_instanceIdToLaunch.clear();
+        if (wasSuccessful) {
+            m_status = Succeeded;
+            exit(0);
+            return;
+        }
+    }
+#endif
+
     // quit when there are no more windows.
     if (shouldExitNow()) {
         m_status = wasSuccessful ? Succeeded : Failed;
@@ -1715,10 +1758,19 @@ MainWindow* Application::showMainWindow(bool minimized)
         m_mainWindow = new MainWindow();
         m_mainWindow->restoreState(QByteArray::fromBase64(APPLICATION->settings()->get("MainWindowState").toString().toUtf8()));
         m_mainWindow->restoreGeometry(QByteArray::fromBase64(APPLICATION->settings()->get("MainWindowGeometry").toString().toUtf8()));
+#ifdef PRISM_CONSOLE_UI
+        if (consoleMode()) {
+            installConsoleUI(m_mainWindow);
+        }
+#endif
 
         if (minimized) {
             m_mainWindow->showMinimized();
         } else {
+#ifdef PRISM_CONSOLE_UI
+            if (consoleMode()) m_mainWindow->showFullScreen();
+            else
+#endif
             m_mainWindow->show();
         }
 

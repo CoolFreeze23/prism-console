@@ -1,116 +1,109 @@
 <p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo.svg">
-  <img alt="Prism Launcher" src="/program_info/org.prismlauncher.PrismLauncher.logo.svg" width="40%">
-</picture>
+  <img src="console-ui/steamos/io.github.CoolFreeze23.PrismConsole.svg" alt="" width="128">
 </p>
+
+<h1 align="center">Prism Console</h1>
 
 <p align="center">
-  Prism Launcher is a custom launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once.<br />
-  <br />This is a <b>fork</b> of the MultiMC Launcher and is <b>not</b> endorsed by it.
+  A controller-first Minecraft launcher for the Steam Deck and other SteamOS handhelds.<br>
+  Install modpacks, manage mods and play, all from Gaming Mode, without touching the desktop.
 </p>
 
-## Installation
+> **Unofficial.** Prism Console is a fork of [Prism Launcher](https://prismlauncher.org). It is **not** Prism
+> Launcher and is **not** endorsed by or affiliated with the Prism Launcher project. Please report problems
+> here, not to Prism Launcher. Minecraft is a trademark of Mojang; this project is not affiliated with Mojang
+> or Microsoft.
 
-- All downloads and instructions for Prism Launcher can be found on our [Website](https://prismlauncher.org/download).
-- Last build status can be found in the [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) tab (this also includes the pull requests status).
+## What it does
 
-<p align="center">
-<a href="https://repology.org/project/prismlauncher/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/prismlauncher.svg?columns=3" alt="Packaging status">
-</a>
-</p>
+- **Made for a controller.** Every screen works with A / B / X / Y, the D-pad and the sticks, with button
+  prompts for Xbox, PlayStation and Nintendo layouts. No mouse, no desktop, no tiny Qt windows.
+- **Modpacks in a few presses.** Browse and install Modrinth modpacks, check for mod updates, and turn mods,
+  resource packs and shaders on or off.
+- **Play straight in.** Jump into a world or a saved server directly. The launch screen shows each step and
+  says what is happening if something is slow; if a launch fails you get a plain reason, Try again and Show log.
+- **Game and launcher, side by side.** Hold **View + Menu** for a second to switch between a running game and
+  the launcher (for example to check a log or stop the game).
+- **Steam tiles.** Add any modpack to Steam as its own tile with generated artwork (optional, see below).
+- **Your Prism skills still apply.** It is Prism Launcher underneath: instances, accounts, Java management
+  and every advanced page are still there.
+- English and Brazilian Portuguese.
 
-### Development Builds
+## Install on a Steam Deck / SteamOS
 
-Please understand that these builds are not intended for most users. There may be bugs, and other instabilities. You have been warned.
+> **Coming soon:** the first ready-to-install release is waiting for Microsoft sign-in approval for this project.
+> Until it appears under [Releases](https://github.com/CoolFreeze23/prism-console/releases), the command below
+> will report that it can't download Prism Console; you can [build it yourself](#building-it-yourself) meanwhile.
 
-There are development builds available through:
+1. Switch to **Desktop Mode** (Steam button > Power > Switch to Desktop).
+2. Open **Konsole** (it's in the application menu under System) and paste this line, then press Enter:
 
-- [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) (includes builds from pull requests opened by contributors)
-- [nightly.link](https://prismlauncher.org/nightly) (this will always point only to the latest version of develop)
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/CoolFreeze23/prism-console/main/install.sh | sh
+   ```
 
-These have debug information in the binaries, so their file sizes are relatively larger.
+3. Switch back to **Gaming Mode**. Prism Console is in your library under **Non-Steam**.
 
-Prebuilt Development builds are provided for **Linux**, **Windows** and **macOS**.
+That's it. To update later, run the same line again. The installer checks the download's checksum and installs
+the app for your user only (it never asks for your password).
 
-On Linux, we also offer our own [Flatpak nightly repository](https://github.com/PrismLauncher/flatpak). Most software centers are able to install it by opening [this link](https://flatpak.prismlauncher.org/prismlauncher-nightly.flatpakref).
+**Want each modpack as its own Steam tile?** Run the installer with one extra option instead, then restart Steam:
 
-## Community & Support
+```bash
+curl -fsSL https://raw.githubusercontent.com/CoolFreeze23/prism-console/main/install.sh | sh -s -- --enable-steam-tiles
+```
 
-Feel free to create a GitHub issue if you find a bug or want to suggest a new feature. We have multiple community spaces where other community members can help you:
+Steam only accepts new tiles from its own interface, so this turns on Steam's local debug interface
+(`127.0.0.1:8080`, reachable only from the Deck itself). Prism Console uses it to add the tile and its artwork.
+Leave it off if you prefer; everything else works without it. To turn it off again, delete
+`~/.local/share/Steam/.cef-enable-remote-debugging` and restart Steam.
 
-- **Our Discord server:**
+**Uninstall:** `curl -fsSL https://raw.githubusercontent.com/CoolFreeze23/prism-console/main/install.sh | sh -s -- --uninstall`
+(your instances and worlds stay in `~/.var/app/io.github.CoolFreeze23.PrismConsole` unless you add `--delete-data`).
 
-[![Prism Launcher Discord server](https://discordapp.com/api/guilds/1031648380885147709/widget.png?style=banner3)](https://prismlauncher.org/discord)
+Prefer to do it by hand? Download `prism-console.flatpak` from the
+[latest release](https://github.com/CoolFreeze23/prism-console/releases/latest) and run
+`flatpak install --user prism-console.flatpak`.
 
-- **Our Matrix space:**
+## Using it
 
-[![Prism Launcher Space](https://img.shields.io/matrix/prismlauncher:matrix.org?style=for-the-badge&label=Matrix%20Space&logo=matrix&color=purple)](https://prismlauncher.org/matrix)
+| Button | Does |
+|---|---|
+| **A** | Select |
+| **B** | Back (one level at a time) |
+| **X** | Configure the selected instance |
+| **Y** | Mods & packs |
+| **LB / RB** | Switch tabs |
+| **Menu** | All Prism tools |
+| **View + Menu (hold 1 s)** | Switch between the game and the launcher |
 
-- **Our Subreddit:**
+Outside Gaming Mode (Desktop Mode, or any other Linux desktop) the app opens as the normal Prism Launcher
+window. Use **Open in Console Mode** from its menu entry to get the controller interface on the desktop.
 
-[![r/PrismLauncher](https://img.shields.io/reddit/subreddit-subscribers/prismlauncher?style=for-the-badge&logo=reddit)](https://prismlauncher.org/reddit)
+**Controls inside Minecraft:** Minecraft itself has no controller support. Install a controller mod such as
+[Controlify](https://modrinth.com/mod/controlify) in your instance, or use a Steam Input layout.
 
-## Translations
+## Building it yourself
 
-The translation effort for Prism Launcher is hosted on [Weblate](https://hosted.weblate.org/projects/prismlauncher/launcher/) and information about translating Prism Launcher is available at <https://github.com/PrismLauncher/Translations>.
+See [console-ui/README.md](console-ui/README.md) for the architecture, tests and development setup. In short:
 
-## Building
+```bash
+git clone https://github.com/CoolFreeze23/prism-console.git && cd prism-console
+git submodule update --init libraries/libnbtplusplus
+(cd console-ui && corepack enable && pnpm install --frozen-lockfile && pnpm build)
+flatpak-builder --user --install --install-deps-from=flathub --force-clean build flatpak/io.github.CoolFreeze23.PrismConsole.yml
+```
 
-If you want to build Prism Launcher yourself, check the [build instructions](https://prismlauncher.org/wiki/development/build-instructions).
+Builds have Microsoft sign-in turned off unless you give them a Microsoft client ID of your own; see
+[console-ui/docs/MICROSOFT-SIGN-IN.md](console-ui/docs/MICROSOFT-SIGN-IN.md).
 
-## Sponsors & Partners
+## Credits and license
 
-We thank all the wonderful backers over at Open Collective! Support Prism Launcher by [becoming a backer](https://opencollective.com/prismlauncher).
+Prism Console is built on [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) (GPL-3.0-only),
+itself a fork of MultiMC. Controller navigation is adapted from
+[X Minecraft Launcher](https://github.com/Voxelum/x-minecraft-launcher) (MIT), and the look follows the
+Ore UI Prism theme by Nursultan Akim (MIT). Full details are in
+[console-ui/UPSTREAM.md](console-ui/UPSTREAM.md).
 
-[![OpenCollective Backers](https://opencollective.com/prismlauncher/backers.svg?width=890&limit=1000)](https://opencollective.com/prismlauncher#backers)
-
-Thanks to JetBrains for providing us a few licenses for all their products, as part of their [Open Source program](https://www.jetbrains.com/opensource/).
-
-<a href="https://jb.gg/OpenSource">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://www.jetbrains.com/company/brand/img/logo_jb_dos_4.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg">
-  <img alt="JetBrains logo" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" width="40%">
-</picture>
-</a>
-
-Thanks to Weblate for hosting our translation efforts.
-
-<a href="https://hosted.weblate.org/engage/prismlauncher/">
-<img src="https://hosted.weblate.org/widgets/prismlauncher/-/open-graph.png" alt="Translation status" width="300" />
-</a>
-
-Thanks to Netlify for providing us their excellent web services, as part of their [Open Source program](https://www.netlify.com/open-source/).
-
-<a href="https://www.netlify.com"> <img src="https://www.netlify.com/v3/img/components/netlify-color-accent.svg" alt="Deploys by Netlify" /> </a>
-
-Thanks to the awesome people over at [MacStadium](https://www.macstadium.com/), for providing M1-Macs for development purposes!
-
-<a href="https://www.macstadium.com"><img src="https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png" alt="Powered by MacStadium" width="300"></a>
-
-## Forking/Redistributing/Custom builds policy
-
-You are free to fork, redistribute and provide custom builds as long as you follow the terms of the [license](LICENSE) (this is a legal responsibility), and if you made code changes rather than just packaging a custom build, please do the following as a basic courtesy:
-
-- Make it clear that your fork is not Prism Launcher and is not endorsed by or affiliated with the Prism Launcher project (<https://prismlauncher.org>).
-- Go through [CMakeLists.txt](CMakeLists.txt) and change Prism Launcher's API keys to your own or set them to empty strings (`""`) to disable them (this way the program will still compile but the functionality requiring those keys will be disabled).
-
-If you have any questions or want any clarification on the above conditions please make an issue and ask us.
-
-If you are just building Prism Launcher for your distribution, please make sure to set the `Launcher_BUILD_PLATFORM` to a slug representing your distribution. Examples are `archlinux`, `fedora` and `nixpkgs`.
-
-Note that if you build this software without removing the provided API keys in [CMakeLists.txt](CMakeLists.txt) you are accepting the following terms and conditions:
-
-- [Microsoft Identity Platform Terms of Use](https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use)
-- [CurseForge 3rd Party API Terms and Conditions](https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions)
-
-If you do not agree with these terms and conditions, then remove the associated API keys from the [CMakeLists.txt](CMakeLists.txt) file by setting them to an empty string (`""`).
-
-## License [![https://github.com/PrismLauncher/PrismLauncher/blob/develop/LICENSE](https://img.shields.io/github/license/PrismLauncher/PrismLauncher?label=License&logo=gnu&color=C4282D)](LICENSE)
-
-All launcher code is available under the GPL-3.0-only license.
-
-The logo and related assets are under the CC BY-SA 4.0 license.
+All code is available under the [GPL-3.0-only](LICENSE) license; see [COPYING.md](COPYING.md) for the notices
+of bundled components.

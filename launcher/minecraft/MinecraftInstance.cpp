@@ -37,6 +37,7 @@
 
 #include "MinecraftInstance.h"
 #include "Application.h"
+#include "console/ConsoleMode.h"
 #include "BuildConfig.h"
 #include "Json.h"
 #include "QObjectPtr.h"
@@ -846,7 +847,13 @@ QString MinecraftInstance::createLaunchScript(AuthSessionPtr session, MinecraftT
     // window size, title and state, legacy
     {
         QString windowParams;
-        if (settings()->get("LaunchMaximized").toBool()) {
+        if (consoleMode() && !isLegacy()) {
+            // Gaming Mode: open the game at the display's native size so gamescope presents it full screen
+            // and unscaled. The instance's own window settings are left untouched for the desktop.
+            const auto* screen = QGuiApplication::primaryScreen();
+            const auto native = screen->size() * screen->devicePixelRatio();
+            windowParams = QString("%1x%2").arg(native.width()).arg(native.height());
+        } else if (settings()->get("LaunchMaximized").toBool()) {
             // FIXME doesn't support maximisation
             if (!isLegacy()) {
                 auto screen = QGuiApplication::primaryScreen();

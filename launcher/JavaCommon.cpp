@@ -34,6 +34,10 @@
  */
 
 #include "JavaCommon.h"
+#include "console/ConsoleMode.h"
+#ifdef PRISM_CONSOLE_UI
+#include "console/ConsoleBridge.h"
+#endif
 #include "java/JavaUtils.h"
 #include "ui/dialogs/CustomMessageBox.h"
 
@@ -41,6 +45,15 @@
 
 bool JavaCommon::checkJVMArgs(QString jvmargs, QWidget* parent)
 {
+    auto warn = [parent](const QString& text) {
+#ifdef PRISM_CONSOLE_UI
+        if (consoleMode()) {
+            ConsoleBridge::ask(QObject::tr("JVM arguments warning"), text, {QObject::tr("OK")});
+            return;
+        }
+#endif
+        CustomMessageBox::selectable(parent, QObject::tr("JVM arguments warning"), text, QMessageBox::Warning)->exec();
+    };
     static const QRegularExpression s_memRegex("-Xm[sx]");
     static const QRegularExpression s_versionRegex("-version:.*");
     if (jvmargs.contains("-XX:PermSize=") || jvmargs.contains(s_memRegex) || jvmargs.contains("-XX-MaxHeapSize") ||
@@ -50,7 +63,7 @@ bool JavaCommon::checkJVMArgs(QString jvmargs, QWidget* parent)
             "or \"-Xms\").\n"
             "There are dedicated boxes for these in the settings (Java tab, in the Memory group at the top).\n"
             "This message will be displayed until you remove them from the JVM arguments.");
-        CustomMessageBox::selectable(parent, QObject::tr("JVM arguments warning"), warnStr, QMessageBox::Warning)->exec();
+        warn(warnStr);
         return false;
     }
     // block lunacy with passing required version to the JVM
@@ -59,7 +72,7 @@ bool JavaCommon::checkJVMArgs(QString jvmargs, QWidget* parent)
             "You tried to pass required Java version argument to the JVM (using \"-version:xxx\"). This is not safe and will not be "
             "allowed.\n"
             "This message will be displayed until you remove this from the JVM arguments.");
-        CustomMessageBox::selectable(parent, QObject::tr("JVM arguments warning"), warnStr, QMessageBox::Warning)->exec();
+        warn(warnStr);
         return false;
     }
     return true;

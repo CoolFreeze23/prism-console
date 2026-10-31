@@ -34,6 +34,7 @@
  */
 
 #include <iostream>
+#include "console/ConsoleMode.h"
 
 #include "Application.h"
 
@@ -49,6 +50,10 @@ int main(int argc, char* argv[])
 #endif
 
     // initialize Qt
+#ifdef PRISM_CONSOLE_UI
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    if (consoleMode()) QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+#endif
     Application app(argc, argv);
     switch (app.status()) {
         case Application::StartingUp:
@@ -68,6 +73,9 @@ int main(int argc, char* argv[])
             Q_INIT_RESOURCE(flat_white);
 
             Q_INIT_RESOURCE(shaders);
+#ifdef PRISM_CONSOLE_UI
+            Q_INIT_RESOURCE(console_assets);
+#endif
             return app.exec();
         }
         case Application::Failed:

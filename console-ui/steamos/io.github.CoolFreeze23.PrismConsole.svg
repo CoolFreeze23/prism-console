@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Prism Console icon. Original artwork for this project (CC0-1.0); not the Prism Launcher logo. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+ <title>Prism Console</title>
+ <defs>
+  <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#2a2e33"/>
+   <stop offset="1" stop-color="#141619"/>
+  </linearGradient>
+  <linearGradient id="pad" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#62b843"/>
+   <stop offset="1" stop-color="#3c8527"/>
+  </linearGradient>
+ </defs>
+ <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#tile)"/>
+ <rect x="5.5" y="5.5" width="117" height="117" rx="24.5" fill="none" stroke="#3c8527" stroke-width="3"/>
+ <!-- three bands of light over the controller -->
+ <g fill="none" stroke-width="6" stroke-linecap="round">
+  <path d="M30 58 A34 34 0 0 1 98 58" stroke="#e8616d"/>
+  <path d="M40 58 A24 24 0 0 1 88 58" stroke="#f2c14e"/>
+  <path d="M50 58 A14 14 0 0 1 78 58" stroke="#4f9be8"/>
+ </g>
+ <!-- the controller -->
+ <path d="M33 66 H95 C106 66 114 75 112 86 L108 102 C106 110 96 112 91 106 L84 97 H44 L37 106 C32 112 22 110 20 102 L16 86 C14 75 22 66 33 66 Z" fill="url(#pad)"/>
+ <rect x="38" y="76" width="8" height="22" rx="2" fill="#f4f4f4"/>
+ <rect x="31" y="83" width="22" height="8" rx="2" fill="#f4f4f4"/>
+ <circle cx="84" cy="81" r="5" fill="#f4f4f4"/>
+ <circle cx="95" cy="91" r="5" fill="#f4f4f4"/>
+</svg>

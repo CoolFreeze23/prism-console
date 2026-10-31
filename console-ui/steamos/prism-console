@@ -1,0 +1,15 @@
+#!/bin/sh
+# Flatpak entry point. Prism picks its interface itself: the controller UI in SteamOS Gaming Mode,
+# the desktop window elsewhere. Set PRISM_CONSOLE=1 or PRISM_DESKTOP=1, or pass --console, to force one.
+set -eu
+if [ "${1:-}" = --console ]; then export PRISM_CONSOLE=1; shift; fi
+unset QTWEBENGINE_REMOTE_DEBUGGING QTWEBENGINE_DISABLE_SANDBOX QTWEBENGINE_CHROMIUM_FLAGS
+export QTWEBENGINEPROCESS_PATH=/app/bin/QtWebEngineProcess
+export QTWEBENGINE_RESOURCES_PATH=/app/resources
+export QTWEBENGINE_LOCALES_PATH=/app/translations/qtwebengine_locales
+export LD_LIBRARY_PATH=/app/lib:/app/lib64:/app/lib/x86_64-linux-gnu
+# Steam's Gaming Mode starts apps with LC_ALL=C. Java then cannot encode non-ASCII file names (a resource
+# pack named with § colour codes made the CrazyCraft pre-launch loader exit with code 1), so keep UTF-8.
+case "${LC_ALL:-}" in "" | *[Uu][Tt][Ff]-8 | *[Uu][Tt][Ff]8) ;; *) export LC_ALL=C.UTF-8 ;; esac
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in *[Uu][Tt][Ff]-8 | *[Uu][Tt][Ff]8) ;; *) export LC_CTYPE=C.UTF-8 ;; esac
+exec /app/bin/prismlauncher --dir "$XDG_DATA_HOME/PrismLauncher" "$@"

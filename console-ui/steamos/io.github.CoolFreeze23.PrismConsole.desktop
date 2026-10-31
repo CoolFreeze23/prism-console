@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Prism Console
+GenericName=Minecraft Launcher
+Comment=Unofficial controller-first Minecraft launcher for SteamOS Gaming Mode, based on Prism Launcher
+Exec=prism-console
+Icon=io.github.CoolFreeze23.PrismConsole
+Categories=Game;
+Keywords=game;minecraft;launcher;mods;steamos;controller;
+StartupWMClass=PrismLauncher
+Actions=Console;
+
+[Desktop Action Console]
+Name=Open in Console Mode
+Exec=prism-console --console

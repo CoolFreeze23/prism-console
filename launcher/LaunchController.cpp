@@ -35,7 +35,12 @@
  */
 
 #include "LaunchController.h"
+#include "console/ConsoleMode.h"
 #include "Application.h"
+#ifdef PRISM_CONSOLE_UI
+#include "console/ConsoleBridge.h"
+#include <QEventLoop>
+#endif
 #include "launch/steps/PrintServers.h"
 #include "minecraft/auth/AccountData.h"
 #include "minecraft/auth/AccountList.h"
@@ -94,6 +99,13 @@ void LaunchController::decideAccount()
     }
 
     if (!accounts->anyAccountIsValid()) {
+#ifdef PRISM_CONSOLE_UI
+        if (consoleMode()) {
+            ConsoleBridge::ask(tr("Sign in required"), tr("Open Accounts and sign in with a Microsoft account that owns Minecraft, then retry Play."), {tr("OK")});
+            m_accountToUse = nullptr;
+            return;
+        }
+#endif
         // Tell the user they need to log in at least one account in order to play.
         auto reply = CustomMessageBox::selectable(m_parentWidget, tr("No Accounts"),
                                                   tr("In order to play Minecraft, you must have at least one Microsoft "
@@ -165,6 +177,22 @@ LaunchDecision LaunchController::decideLaunchMode()
     }
 
     if (state == AccountState::Working) {
+#ifdef PRISM_CONSOLE_UI
+        if (consoleMode()) {
+            auto task = accountToCheck->currentTask();
+            if (task && !task->isFinished()) {
+                QEventLoop wait;
+                connect(task.get(), &Task::finished, &wait, &QEventLoop::quit);
+                connect(task.get(), &Task::status, this, &Task::status, Qt::UniqueConnection);
+                emit status(tr("Refreshing Minecraft account…"));
+                if (!task->isRunning())
+                    task->start();
+                if (!task->isFinished())
+                    wait.exec();
+            }
+            state = accountToCheck->accountState();
+        } else {
+#endif
         // refresh is in progress, we need to wait for it to finish to proceed.
         ProgressDialog progDialog(m_parentWidget);
         progDialog.showSkipButton();
@@ -180,6 +208,9 @@ LaunchDecision LaunchController::decideLaunchMode()
         }
 
         state = accountToCheck->accountState();
+#ifdef PRISM_CONSOLE_UI
+        }
+#endif
     }
 
     QString reauthReason;
@@ -211,6 +242,10 @@ LaunchDecision LaunchController::decideLaunchMode()
 
 bool LaunchController::askPlayDemo() const
 {
+#ifdef PRISM_CONSOLE_UI
+    if (consoleMode())
+        return ConsoleBridge::ask(tr("Play demo?"), tr("This account does not own Minecraft. The full game requires a purchased account."), {tr("Cancel"), tr("Play demo")}).value("choice") == tr("Play demo");
+#endif
     QMessageBox box(m_parentWidget);
     box.setWindowTitle(tr("Play demo?"));
     QString text = m_accountToUse
@@ -232,6 +267,17 @@ QString LaunchController::askOfflineName(const QString& playerName, bool* ok)
     if (ok != nullptr) {
         *ok = false;
     }
+#ifdef PRISM_CONSOLE_UI
+    if (consoleMode()) {
+        const auto answer = ConsoleBridge::ask(tr("Offline player name"), tr("Online authentication is unavailable or offline play was selected. Choose your player name."), {tr("Cancel"), tr("Continue")}, playerName, true);
+        const auto name = answer.value("input").toString().trimmed();
+        if (answer.value("choice") != tr("Continue") || name.isEmpty() || name.size() > 16) return {};
+        for (const auto& c : name) if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')) return {};
+        APPLICATION->settings()->set("LastOfflinePlayerName", name);
+        if (ok) *ok = true;
+        return name;
+    }
+#endif
 
     QString title, message;
     title = tr("Player name");
@@ -337,6 +383,12 @@ void LaunchController::login()
 
 bool LaunchController::reauthenticateAccount(const MinecraftAccountPtr& account, const QString& reason)
 {
+#ifdef PRISM_CONSOLE_UI
+    if (consoleMode()) {
+        ConsoleBridge::ask(tr("Sign-in needs attention"), reason + tr(". Open Accounts and sign in with Microsoft again, then retry Play."), {tr("OK")});
+        return false;
+    }
+#endif
     auto button = QMessageBox::warning(
         m_parentWidget, tr("Account refresh failed"), tr("%1. Do you want to reauthenticate this account?").arg(reason),
         QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No, QMessageBox::StandardButton::Yes);
@@ -372,6 +424,9 @@ void LaunchController::launchInstance()
     Q_ASSERT(m_session.get() != nullptr);
 
     if (!m_instance->reloadSettings()) {
+#ifdef PRISM_CONSOLE_UI
+        if (!consoleMode())
+#endif
         QMessageBox::critical(m_parentWidget, tr("Error!"), tr("Couldn't load the instance profile."));
         emitFailed(tr("Couldn't load the instance profile."));
         return;
@@ -385,7 +440,7 @@ void LaunchController::launchInstance()
 
     const auto* console = qobject_cast<InstanceWindow*>(m_parentWidget);
     const auto showConsole = m_instance->settings()->get("ShowConsole").toBool();
-    if (!console && showConsole) {
+    if (!console && showConsole && !consoleMode()) {
         APPLICATION->showInstanceWindow(m_instance);
     }
     connect(m_launcher, &LaunchTask::readyForLaunch, this, &LaunchController::readyForLaunch);
@@ -472,7 +527,7 @@ void LaunchController::onSucceeded()
 
 void LaunchController::onFailed(QString reason)
 {
-    if (m_instance->settings()->get("ShowConsoleOnError").toBool()) {
+    if (m_instance->settings()->get("ShowConsoleOnError").toBool() && !consoleMode()) {
         APPLICATION->showInstanceWindow(m_instance, "console");
     }
     emitFailed(std::move(reason));
@@ -480,6 +535,15 @@ void LaunchController::onFailed(QString reason)
 
 void LaunchController::onProgressRequested(Task* task) const
 {
+    if (consoleMode()) {
+        // Keep the controller renderer responsive during launch downloads.
+        auto* self = const_cast<LaunchController*>(this);
+        connect(task, &Task::status, self, &Task::status, Qt::UniqueConnection);
+        connect(task, &Task::progress, self, &Task::progress, Qt::UniqueConnection);
+        m_launcher->proceed();
+        if (!task->isRunning() && !task->isFinished()) QMetaObject::invokeMethod(task, &Task::start, Qt::QueuedConnection);
+        return;
+    }
     ProgressDialog progDialog(m_parentWidget);
     progDialog.showSkipButton();
     m_launcher->proceed();
@@ -494,6 +558,14 @@ bool LaunchController::abort()
     if (!m_launcher->canAbort()) {
         return false;
     }
+#ifdef PRISM_CONSOLE_UI
+    if (consoleMode()) {
+        if (ConsoleBridge::takeStopConfirmation())
+            return m_launcher->abort();
+        const auto response = ConsoleBridge::ask(tr("Cancel launch or stop game?"), tr("Stopping a running game can lose unsaved progress. Save your world first."), {tr("Keep running"), tr("Stop")});
+        return response.value("choice") == tr("Stop") && m_launcher->abort();
+    }
+#endif
     auto response = CustomMessageBox::selectable(m_parentWidget, tr("Kill Minecraft?"),
                                                  tr("This can cause the instance to get corrupted and should only be used if Minecraft "
                                                     "is frozen for some reason"),
