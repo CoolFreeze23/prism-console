@@ -1,6 +1,7 @@
 # Stop check on the handheld: plays a copy of a CrazyCraft world through the real Prism Console UI (debug port
-# 9223, isolated display), then presses Stop. Passes when the world was saved after Stop, the game's Java and the
-# pack's Crash Assistant are gone within 25 s, and the launcher reports a normal close rather than a crash.
+# 9223, isolated display), then presses Stop. Passes when the world files were written after Stop, the game's Java
+# and the pack's Crash Assistant are gone within 25 s, and the launcher reports a normal close rather than a crash.
+# The save is judged by the files: the game's logger shuts down with the JVM before the save lines are written.
 # The world copy is made and removed by the runner; its folder name comes as the first argument.
 import json, subprocess, sys, time, urllib.request
 from pathlib import Path
@@ -79,7 +80,6 @@ if joined:
     game, assistant = pids(game_pattern), pids(assistant_pattern)
     print('Game Java:', game, '| Crash Assistant:', assistant or 'not running (its part is not covered)')
     saved_before = level.stat().st_mtime
-    log_before = len(log_path.read_text(errors='replace'))
     print('Stop pressed:', press('[data-action=stop-game]')); time.sleep(1)
     stopped_at = time.time()
     print('Confirmed stop:', press('[data-action=confirm-stop]')); time.sleep(0.5)
@@ -93,11 +93,10 @@ if joined:
     print('Java and Crash Assistant gone after:', f'{gone_after:.1f}s' if gone_after is not None else 'NOT within 25 s',
           '| left:', pids(game_pattern), pids(assistant_pattern))
     if gone_after is None: failures.append('game or Crash Assistant still running 25 s after Stop')
-    after = log_path.read_text(errors='replace')[log_before:]
-    saved = level.stat().st_mtime > saved_before
-    print('level.dat rewritten after Stop:', saved, '| log:', [m for m in ('Stopping server', 'Saving worlds', 'All dimensions are saved') if m in after])
-    if not saved: failures.append('world not saved after Stop')
-    if 'All dimensions are saved' not in after and 'Saving worlds' not in after: failures.append('no world save in the log after Stop')
+    written = level.stat().st_mtime - stopped_at
+    regions = [p for p in level.parent.rglob('*.mca') if p.stat().st_mtime >= stopped_at]
+    print(f'level.dat written {written:+.1f}s after Stop (before: {saved_before - stopped_at:+.1f}s) | region files written after Stop: {len(regions)}')
+    if written < 0: failures.append('level.dat not written after Stop')
     time.sleep(3)
     outcome = js("JSON.stringify({ failed: !!document.querySelector('.failed-step'), dialog: document.querySelector('[role=dialog] #dialog-title')?.textContent || null, stop: !!document.querySelector('[data-action=stop-game]') })")
     print('Launcher after the game closed:', outcome)
