@@ -67,6 +67,16 @@ function describe(r: { minecraft: string[]; loaders: string[]; type: string }) {
   return [r.minecraft.length ? t('app.minecraftVersion', { version: r.minecraft[r.minecraft.length - 1] }) : '', loader, type].filter(Boolean).join(' · ')
 }
 onMounted(() => { if (!hits.value.length) search() })
+// The page opens before its first results arrive. When they do, a controller starts on the first one, unless the
+// player has already moved somewhere other than the search row.
+let placedFocus = false
+watch(hits, async list => {
+  if (placedFocus || !list.length) return
+  placedFocus = true
+  await nextTick()
+  const active = document.activeElement
+  if (!active || active === document.body || active.closest('.modpack-search')) document.querySelector<HTMLElement>('.modpack-card')?.focus()
+}, { immediate: true })
 </script>
 
 <template>

@@ -44,6 +44,15 @@ describe('Modrinth modpack browser', () => {
     expect(window.dispatchEvent(new Event('prism-back', { cancelable: true }))).toBe(true)
     wrapper.unmount()
   })
+  it('moves a controller to the first result when the results arrive after the page opened', async () => {
+    mocks.invoke.mockReset()
+    mocks.invoke.mockResolvedValue(undefined)
+    const wrapper = mount(ModpackBrowser, { props: { busy: false, state: { loading: true } }, attachTo: document.body })
+    ;(wrapper.find('.modpack-search button').element as HTMLElement).focus()
+    await wrapper.setProps({ state: { hits: [hit], total: 1 } }); await flushPromises()
+    expect(document.activeElement?.classList.contains('modpack-card')).toBe(true)
+    wrapper.unmount()
+  })
   it('filters by loader, Minecraft version and sort order, and clears them again', async () => {
     vi.useFakeTimers()
     mocks.invoke.mockReset()
