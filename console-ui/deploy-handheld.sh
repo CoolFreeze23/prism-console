@@ -57,9 +57,8 @@ $ssh "set -eu
   # Entry point, Desktop Mode menu entry and icon (written as Flatpak exports, as build-finish would).
   steamos=prism-console-source/console-ui/steamos
   install -m 755 \$steamos/prism-console \$package/files/bin/prism-console
-  mkdir -p \$package/export/share/applications
-  sed 's|^Exec=prism-console|Exec=/usr/bin/flatpak run --branch=master --arch=x86_64 --command=prism-console io.github.CoolFreeze23.PrismConsole|' \
-    \$steamos/io.github.CoolFreeze23.PrismConsole.desktop > \$package/export/share/applications/io.github.CoolFreeze23.PrismConsole.desktop
+  # Exec stays in its source form (prism-console); flatpak build-export rewrites it to a flatpak run line.
+  install -D -m 644 \$steamos/io.github.CoolFreeze23.PrismConsole.desktop \$package/export/share/applications/io.github.CoolFreeze23.PrismConsole.desktop
   install -D -m 644 \$steamos/io.github.CoolFreeze23.PrismConsole.svg \$package/export/share/icons/hicolor/scalable/apps/io.github.CoolFreeze23.PrismConsole.svg
   flatpak build-export prism-console-preview-repository \$package
   flatpak --user install -y --or-update prism-console-local-preview io.github.CoolFreeze23.PrismConsole

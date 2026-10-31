@@ -1,2 +1,8 @@
 *.pem -crlf
 **/testdata/** -text -diff
+
+# Prism Console: shell scripts and everything shipped to SteamOS keep LF line endings on every platform.
+console-ui/** text=auto eol=lf
+flatpak/** text eol=lf
+install.sh text eol=lf
+.github/** text eol=lf
