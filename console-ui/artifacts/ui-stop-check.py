@@ -1,11 +1,13 @@
-# Stop check on the handheld: plays a copy of a CrazyCraft world through the real Prism Console UI (debug port
-# 9223, isolated display), then presses Stop. Passes when the world files were written after Stop, the game's Java
+# Stop check on the handheld: plays a copy of a CrazyCraft world through the real Prism Console UI (harness debug
+# port, isolated display), then presses Stop. Passes when the world files were written after Stop, the game's Java
 # and the pack's Crash Assistant are gone within 25 s, and the launcher reports a normal close rather than a crash.
 # The save is judged by the files: the game's logger shuts down with the JVM before the save lines are written.
 # The world copy is made and removed by the runner; its folder name comes as the first argument.
 import json, subprocess, sys, time, urllib.request
 from pathlib import Path
 import websocket
+sys.path.insert(0, str(Path(__file__).parent))
+from harness_port import debug_targets
 
 world = sys.argv[1] if len(sys.argv) > 1 else 'Prism stop check'
 minecraft = Path('/home/deck/.var/app/io.github.CoolFreeze23.PrismConsole/data/PrismLauncher/instances/CrazyCraft5/.minecraft')
@@ -16,7 +18,7 @@ if not level.exists(): sys.exit(f'no world copy at {level.parent}')
 
 for _ in range(90):
     try:
-        targets = json.load(urllib.request.urlopen('http://127.0.0.1:9223/json'))
+        targets = json.load(urllib.request.urlopen(debug_targets()))
         target = next(t for t in targets if t.get('url', '').startswith('qrc:/console/'))
         break
     except Exception:

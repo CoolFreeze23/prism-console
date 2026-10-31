@@ -38,6 +38,8 @@ Players use A/B/X/Y and sticks; buttons are large, one line. `{name}` style plac
 | `app.browse_modpacks` | Browse modpacks | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 21 |
 | `app.browse_modrinth_modpacks` | Browse Modrinth modpacks | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 32 |
 | `app.busy` | Prism is busy. Try again in a moment. | main shell (library, accounts, settings, dialogs, launch screen) — text |  |
+| `app.keyboardUnavailable` | Steam's keyboard didn't open. Press STEAM + X to open it. | toast after A on a text field when Steam's on-screen keyboard could not be opened; STEAM + X is Steam's own shortcut, keep it as is — sentence |  |
+| `app.linkUnavailable` | This link can't open here. Open it on another device: {url} | toast when a web link could not be opened in Gaming Mode; {url} is the address — sentence |  |
 | `app.cancel_sign_in` | Cancel sign-in | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 20 |
 | `app.cancel_task` | Cancel task | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 17 |
 | `app.choose_automatic_java_downloads_or` | Choose automatic Java downloads, or keep your existing Java settings. Sign-in is available from Accounts. | main shell (library, accounts, settings, dialogs, launch screen) — sentence / paragraph |  |

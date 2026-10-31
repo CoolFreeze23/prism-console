@@ -1,10 +1,11 @@
-# Drives the real Prism Console UI (remote-debugging port 9223, isolated display) through a
+# Drives the real Prism Console UI (harness debug port, isolated display) through a
 # CrazyCraft launch by clicking, records the launch overlay states and screenshots, then stops the game.
 import base64, json, sys, time, urllib.request
 from pathlib import Path
 import websocket
 sys.path.insert(0, str(Path(__file__).parent))
 from virtual_pad import VirtualPad
+from harness_port import debug_targets
 
 out = Path('/home/deck/Applications/prism-console-test-results/launch')
 out.mkdir(parents=True, exist_ok=True)
@@ -33,7 +34,7 @@ def environment_report():
 
 for _ in range(120):
     try:
-        targets = json.load(urllib.request.urlopen('http://127.0.0.1:9223/json'))
+        targets = json.load(urllib.request.urlopen(debug_targets()))
         target = next(t for t in targets if t.get('url', '').startswith('qrc:/console/'))
         break
     except Exception:

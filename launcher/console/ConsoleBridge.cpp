@@ -2,6 +2,7 @@
 #include "ConsoleBridge.h"
 #include "ConsoleBridgeSupport.h"
 #include "ConsoleWorkflow.h"
+#include "ExternalLinks.h"
 #include "GamepadChord.h"
 #include "console/ConsoleMode.h"
 #include <QCloseEvent>
@@ -47,7 +48,7 @@ public:
 
 ConsoleBridge::ConsoleBridge(MainWindow* window) : QObject(window), m_window(window) {
     activeConsole = this;
-    m_workflow = new ConsoleWorkflow(window, [this] { emit changed(); });
+    m_workflow = new ConsoleWorkflow(window, [this] { emit changed(); }, [this](const QUrl& url) { openLink(url, "link"); });
     // Console-only preferences, registered up front so values saved in an earlier session read back at once.
     for (const auto& [key, fallback] : std::initializer_list<std::pair<const char*, QVariant>>{{"ConsoleSoundEnabled", true}, {"ConsoleSoundVolume", 35}})
         if (!APPLICATION->settings()->contains(key)) APPLICATION->settings()->registerSetting(key, fallback);
@@ -171,6 +172,16 @@ void ConsoleBridge::toggleGame(bool toGame) {
         m_window->activateWindow();
         emit changed();
     }
+}
+
+// Opens a link; when nothing could open it, the renderer says so (with the address for a web link).
+void ConsoleBridge::openLink(const QUrl& url, const QString& kind) {
+    QPointer<ConsoleBridge> self(this);
+    openExternal(this, url, [self, url, kind](bool opened) {
+        if (opened || !self) return;
+        self->m_notice = QVariantMap{{"seq", self->m_notice.value("seq").toInt() + 1}, {"kind", kind}, {"url", url.toString()}};
+        emit self->changed();
+    });
 }
 
 void ConsoleBridge::updateLaunch(const QString& id, const QVariantMap& changes) {

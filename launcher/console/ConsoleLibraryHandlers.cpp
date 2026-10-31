@@ -143,7 +143,7 @@ void ConsoleBridge::registerLibraryHandlers()
             }
         }
         return ok(QVariantMap{{"instances", instances}, {"accounts", accounts}, {"login", m_loginState},
-                             {"task", m_taskState}, {"versions", versions}, {"launches", m_launchStates}, {"prompt", m_prompt},
+                             {"task", m_taskState}, {"versions", versions}, {"launches", m_launchStates}, {"prompt", m_prompt}, {"notice", m_notice},
                              {"language", APPLICATION->settings()->get("Language").toString()},
                              {"modpacksRevision", m_modpacksRevision},
                              {"sound", QVariantMap{{"enabled", APPLICATION->settings()->get("ConsoleSoundEnabled").toBool()},
@@ -245,7 +245,8 @@ void ConsoleBridge::registerLibraryHandlers()
     });
 
     on({"keyboard"}, [this](const QString&, const QVariantMap&) -> QVariantMap {
-        return QDesktopServices::openUrl(QUrl("steam://open/keyboard")) ? ok() : fail("Steam keyboard unavailable");
+        openLink(QUrl("steam://open/keyboard"), "keyboard");
+        return ok();
     });
 
     onInstance({"copyInstance"}, [this](MinecraftInstance* inst, const QString&, const QVariantMap& args) -> QVariantMap {

@@ -57,8 +57,8 @@ QString label(QWidget* w) {
 }
 }
 
-ConsoleWorkflow::ConsoleWorkflow(MainWindow* main, std::function<void()> changed)
-    : QObject(main), m_main(main), m_changed(std::move(changed)) { qApp->installEventFilter(this); }
+ConsoleWorkflow::ConsoleWorkflow(MainWindow* main, std::function<void()> changed, std::function<void(const QUrl&)> openLink)
+    : QObject(main), m_main(main), m_changed(std::move(changed)), m_openLink(std::move(openLink)) { qApp->installEventFilter(this); }
 
 QString ConsoleWorkflow::id(QObject* object) {
     QString value = object->property("consoleControlId").toString();
@@ -265,7 +265,7 @@ QVariantMap ConsoleWorkflow::dispatch(const QVariantMap& args) {
         const QUrl url(value.toString()); bool found = false; QTextDocument doc; doc.setHtml(label->text());
         for (auto block = doc.begin(); block.isValid(); block = block.next()) for (auto it = block.begin(); !it.atEnd(); ++it) if (it.fragment().charFormat().anchorHref() == url.toString()) found = true;
         if (!found) return bad("Link is no longer available");
-        QPointer<QLabel> safe(label); QTimer::singleShot(0, this, [safe, url] { if (safe) { if (safe->openExternalLinks() && (url.scheme() == "https" || url.scheme() == "http")) QDesktopServices::openUrl(url); else emit safe->linkActivated(url.toString()); } });
+        QPointer<QLabel> safe(label); QTimer::singleShot(0, this, [this, safe, url] { if (safe) { if (safe->openExternalLinks() && (url.scheme() == "https" || url.scheme() == "http")) m_openLink(url); else emit safe->linkActivated(url.toString()); } });
     } else if (auto* button = qobject_cast<QAbstractButton*>(widget); button && op == "click") {
         QPointer<QAbstractButton> safe(button); QTimer::singleShot(0, this, [safe] { if (safe) { if (auto* tool = qobject_cast<QToolButton*>(safe.data()); tool && tool->menu() && tool->popupMode() == QToolButton::InstantPopup) tool->menu()->popup(QPoint()); else safe->click(); } });
     } else if (auto* line = qobject_cast<QLineEdit*>(widget); line && op == "value" && !line->isReadOnly()) {
@@ -288,7 +288,7 @@ QVariantMap ConsoleWorkflow::dispatch(const QVariantMap& args) {
         const QUrl url(value.toString()); bool found = false;
         for (auto block = browser->document()->begin(); block.isValid(); block = block.next()) for (auto it = block.begin(); !it.atEnd(); ++it) if (it.fragment().charFormat().anchorHref() == url.toString()) found = true;
         if (!found) return bad("Link is no longer available");
-        QPointer<QTextBrowser> safe(browser); QTimer::singleShot(0, this, [safe, url] { if (safe) { if (safe->openExternalLinks() && (url.scheme() == "https" || url.scheme() == "http")) QDesktopServices::openUrl(url); else emit safe->anchorClicked(url); } });
+        QPointer<QTextBrowser> safe(browser); QTimer::singleShot(0, this, [this, safe, url] { if (safe) { if (safe->openExternalLinks() && (url.scheme() == "https" || url.scheme() == "http")) m_openLink(url); else emit safe->anchorClicked(url); } });
     } else if (auto* view = qobject_cast<QAbstractItemView*>(widget)) {
         auto* model = view->model(); if (!model) return bad("List is unavailable");
         if (op == "page") { int offset = value.toInt(); if (offset < 0 || offset >= qMax(1, model->rowCount(view->rootIndex()))) return bad("Invalid page"); widget->setProperty("consoleOffset", offset);

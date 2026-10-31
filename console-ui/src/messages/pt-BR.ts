@@ -36,6 +36,8 @@ export const ptBR: Record<keyof typeof en, string> = {
   'app.browse_modpacks': "Explorar modpacks",
   'app.browse_modrinth_modpacks': "Explorar modpacks do Modrinth",
   'app.busy': "O Prism está ocupado. Tente de novo daqui a pouco.",
+  'app.keyboardUnavailable': "O teclado do Steam não abriu. Aperte STEAM + X para abrir.",
+  'app.linkUnavailable': "Não dá para abrir este link aqui. Abra em outro aparelho: {url}",
   'app.cancel_sign_in': "Cancelar login",
   'app.cancel_task': "Cancelar tarefa",
   'app.choose_automatic_java_downloads_or': "Escolha se o Prism baixa o Java automaticamente ou se mantém suas configurações de Java atuais. Você pode entrar na sua conta em Contas.",

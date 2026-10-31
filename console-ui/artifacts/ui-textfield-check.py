@@ -1,4 +1,4 @@
-# Handheld check with a virtual pad (stick + A/B) on the real Prism Console (run-pack-check.sh, debug port 9223):
+# Handheld check with a virtual pad (stick + A/B) on the real Prism Console (run-pack-check.sh, harness debug port):
 # the modpack browser starts on a result, a text field does not trap the stick, A starts typing (the stick then
 # stays for Steam's keyboard), B stops typing, and the search filters reach Modrinth.
 import json, sys, time, urllib.request
@@ -6,10 +6,11 @@ from pathlib import Path
 import websocket
 sys.path.insert(0, str(Path(__file__).parent))
 from virtual_pad import VirtualPad, BTN_SOUTH, BTN_EAST, ABS_Y
+from harness_port import debug_targets
 
 for _ in range(120):
     try:
-        target = next(t for t in json.load(urllib.request.urlopen('http://127.0.0.1:9223/json')) if t.get('url', '').startswith('qrc:/console/'))
+        target = next(t for t in json.load(urllib.request.urlopen(debug_targets())) if t.get('url', '').startswith('qrc:/console/'))
         break
     except Exception:
         time.sleep(1)

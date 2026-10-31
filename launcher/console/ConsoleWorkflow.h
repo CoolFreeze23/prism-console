@@ -11,7 +11,7 @@ class MainWindow;
 // their controls are rendered by the controller UI, never as desktop windows.
 class ConsoleWorkflow final : public QObject {
 public:
-    ConsoleWorkflow(MainWindow* main, std::function<void()> changed);
+    ConsoleWorkflow(MainWindow* main, std::function<void()> changed, std::function<void(const QUrl&)> openLink);
     QVariantMap snapshot();
     QVariantMap dispatch(const QVariantMap& args);
     QVariantList commands(const QString& instance);
@@ -24,5 +24,6 @@ private:
     QList<QPointer<QWidget>> m_windows;
     QHash<QString, QPointer<QObject>> m_objects;
     std::function<void()> m_changed;
+    std::function<void(const QUrl&)> m_openLink;  // web links in mirrored dialogs
     quint64 m_serial = 0;
 };

@@ -34,6 +34,8 @@ export interface Snapshot {
   setup?: { required: boolean; automaticJava: boolean };
   prompt?: { id?: string; title?: string; text?: string; choices?: string[]; input?: string; textInput?: boolean };
   launches?: Record<string, LaunchState>;
+  // Something Prism could not do for the renderer, said once per seq: Steam's keyboard or a link that did not open.
+  notice?: { seq: number; kind: 'keyboard' | 'link'; url?: string };
   instances: Instance[]; accounts: Account[]; versions?: string[];
   task?: { active: boolean; title?: string; status?: string; current?: number; total?: number };
   login?: { active: boolean; status?: string; code?: string; url?: string; expiresIn?: number }

@@ -1,8 +1,8 @@
 #!/bin/sh
 # Real-data launch check on the handheld: the installed Prism Console on a private Xvfb display with the UI
-# debug port on 127.0.0.1:9223, started the way a Steam tile starts it. The environment is the one Steam gave
-# a real tile launch (captured by capture-steam-env.sh; LC_ALL=C, Steam's LD_PRELOAD, PATH and Steam*/SDL
-# variables), minus anything that would reach the real gamescope screen. It uses the user's running session
+# debug port on 127.0.0.1 (9223 or the next free one, see below), started the way a Steam tile starts it. The
+# environment is the one Steam gave a real tile launch (captured by capture-steam-env.sh; LC_ALL=C, Steam's
+# LD_PRELOAD, PATH and Steam*/SDL variables), minus anything that would reach the real gamescope screen. It uses the user's running session
 # bus, as a real tile does. The app runs through the installed /app/bin/prism-console wrapper (only its
 # test-hostile unset line is dropped), so the wrapper's own fixes are what gets tested.
 # Test only: PACK_CHECK_WITHOUT_LOCALE_FIX=1 also drops the wrapper's UTF-8 locale lines, to prove the launch
@@ -23,6 +23,18 @@ while [ ! -s "$root/prism-console-pack-display" ]; do
 done
 display=$(cat "$root/prism-console-pack-display")
 
+# The UI debug port: 9223 unless another app (Vesktop, for one) already listens there. The checks read the port
+# from prism-console-pack-port; PACK_CHECK_PORT picks one, and a port in use is refused rather than shared.
+port=${PACK_CHECK_PORT:-}
+if [ -z "$port" ]; then
+ for candidate in $(seq 9223 9240); do
+  ss -Hltn "sport = :$candidate" | grep -q . || { port=$candidate; break; }
+ done
+fi
+[ -n "$port" ] || { echo "No free debug port between 9223 and 9240" >&2; exit 1; }
+if ss -Hltn "sport = :$port" | grep -q .; then echo "Debug port $port is already in use" >&2; exit 1; fi
+echo "$port" > "$root/prism-console-pack-port"
+
 # Steam's tile environment, keeping the display and session pointing at this test.
 set --
 while IFS= read -r line; do
@@ -39,5 +51,5 @@ bus="unix:path=/run/user/$(id -u)/bus"
 printf '%s\0' "$@" > "$root/prism-console-pack-env"
 [ -S "/run/user/$(id -u)/bus" ] || { echo "No running session bus" >&2; exit 1; }
 exec env -i "$@" DISPLAY=":$display" DBUS_SESSION_BUS_ADDRESS="$bus" flatpak run --env=DISPLAY=":$display" --env=QT_QPA_PLATFORM=xcb --env=PRISM_CONSOLE=1 \
- --env=QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:9223 --env=PACK_CHECK_STRIP="$strip" ${PACK_CHECK_QT_LOGGING:+--env=QT_LOGGING_RULES="$PACK_CHECK_QT_LOGGING"} --command=sh io.github.CoolFreeze23.PrismConsole \
+ --env=QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:$port --env=PACK_CHECK_STRIP="$strip" ${PACK_CHECK_QT_LOGGING:+--env=QT_LOGGING_RULES="$PACK_CHECK_QT_LOGGING"} --command=sh io.github.CoolFreeze23.PrismConsole \
  -c 'sed "$PACK_CHECK_STRIP" /app/bin/prism-console > /tmp/prism-console-pack-check; exec sh /tmp/prism-console-pack-check'

@@ -56,6 +56,18 @@ describe('Prism controller UI', () => {
     running = false; notify(); await flushPromises()
     expect(wrapper.find('[data-action=stop-game]').exists()).toBe(false)
   })
+  it("says what to do when Steam's keyboard or a link could not open, never repeating an old notice", async () => {
+    let notice: any = { seq: 4, kind: 'link', url: 'https://old.example' }
+    let notify = () => {}
+    mocks.connect.mockImplementation(async (callback: () => void) => { notify = callback })
+    mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? { instances: [instance], accounts: [], notice } : undefined)
+    wrapper = mount(App, { attachTo: document.body }); await flushPromises()
+    expect(wrapper.find('.toasts').text()).not.toContain('old.example')
+    notice = { seq: 5, kind: 'keyboard' }; notify(); await flushPromises()
+    expect(wrapper.find('.toasts').text()).toContain('STEAM + X')
+    notice = { seq: 6, kind: 'link', url: 'https://modrinth.com/modpack/x' }; notify(); await flushPromises()
+    expect(wrapper.find('.toasts').text()).toContain('https://modrinth.com/modpack/x')
+  })
   it('closes the stop card by itself when the game finishes saving', async () => {
     let running = true
     let notify = () => {}

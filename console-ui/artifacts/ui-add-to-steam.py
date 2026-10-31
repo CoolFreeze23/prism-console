@@ -1,11 +1,14 @@
-# Presses Configure -> "Add to Steam" for CrazyCraft in the real Prism Console UI (debug port 9223) and
+# Presses Configure -> "Add to Steam" for CrazyCraft in the real Prism Console UI (harness debug port) and
 # reports the resulting toast and the tile ID Prism recorded.
 import json, sys, time, urllib.request
+from pathlib import Path
 import websocket
+sys.path.insert(0, str(Path(__file__).parent))
+from harness_port import debug_targets
 
 for _ in range(120):
     try:
-        target = next(t for t in json.load(urllib.request.urlopen('http://127.0.0.1:9223/json')) if t.get('url', '').startswith('qrc:/console/'))
+        target = next(t for t in json.load(urllib.request.urlopen(debug_targets())) if t.get('url', '').startswith('qrc:/console/'))
         break
     except Exception:
         time.sleep(1)

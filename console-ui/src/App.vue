@@ -108,6 +108,13 @@ watch(error, message => {
   error.value = ''
   toast(friendly(message))
 })
+// Steam's keyboard or a link that Gaming Mode could not open: say what to do instead. The first value seen is
+// the baseline, so reopening the page never repeats an old notice.
+watch(() => state.value.notice?.seq, (seq, before) => {
+  const notice = state.value.notice
+  if (before === undefined || !notice || !seq) return
+  toast(notice.kind === 'keyboard' ? t('app.keyboardUnavailable') : t('app.linkUnavailable', { url: notice.url || '' }))
+})
 watch(() => state.value.task?.active, (active, wasActive) => {
   const task = state.value.task
   if (!wasActive || active || !task?.title) return

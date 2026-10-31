@@ -1,7 +1,10 @@
-# Measures Prism Console on the handheld (run-pack-check display, debug port 9223): CPU and RSS of the launcher
+# Measures Prism Console on the handheld (run-pack-check display, harness debug port): CPU and RSS of the launcher
 # and its web engine, the page's JS heap, and the size of the polled replies, idle and with a long modpack list.
 import json, subprocess, sys, time, urllib.request
+from pathlib import Path
 import websocket
+sys.path.insert(0, str(Path(__file__).parent))
+from harness_port import debug_targets
 
 def processes():
     # Only this Prism Console runs during the probe, so the launcher and its web engine are matched by name.
@@ -21,7 +24,7 @@ def cpu_seconds(pids):
 
 for _ in range(120):
     try:
-        target = next(t for t in json.load(urllib.request.urlopen('http://127.0.0.1:9223/json')) if t.get('url', '').startswith('qrc:/console/'))
+        target = next(t for t in json.load(urllib.request.urlopen(debug_targets())) if t.get('url', '').startswith('qrc:/console/'))
         break
     except Exception:
         time.sleep(1)

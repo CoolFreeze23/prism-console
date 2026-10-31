@@ -36,6 +36,8 @@ export const en = {
   'app.browse_modpacks': "Browse modpacks",
   'app.browse_modrinth_modpacks': "Browse Modrinth modpacks",
   'app.busy': "Prism is busy. Try again in a moment.",
+  'app.keyboardUnavailable': "Steam's keyboard didn't open. Press STEAM + X to open it.",
+  'app.linkUnavailable': "This link can't open here. Open it on another device: {url}",
   'app.cancel_sign_in': "Cancel sign-in",
   'app.cancel_task': "Cancel task",
   'app.choose_automatic_java_downloads_or': "Choose automatic Java downloads, or keep your existing Java settings. Sign-in is available from Accounts.",
