@@ -103,6 +103,7 @@ void ConcurrentTask::clear()
     m_done.clear();
     m_failed.clear();
     m_queue.clear();
+    m_restart.clear();
     m_task_progress.clear();
 
     m_progress = 0;
@@ -173,7 +174,8 @@ void ConcurrentTask::startSubTask(Task::Ptr next)
     QMetaObject::invokeMethod(this, [this, next]() {
         if (!isRunning() || !m_doing.contains(next.get()))
             return;
-        if (next->isFinished()) {
+        const bool retry = m_restart.remove(next.get()) && next->isFinished() && !next->wasSuccessful();
+        if (next->isFinished() && !retry) {
             if (next->wasSuccessful())
                 subTaskSucceeded(next);
             else

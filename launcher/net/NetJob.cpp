@@ -37,6 +37,8 @@
 
 #include "NetJob.h"
 #include <QNetworkReply>
+#include <QTimer>
+#include "net/Logging.h"
 #include "net/Request.h"
 #include "tasks/ConcurrentTask.h"
 
@@ -72,18 +74,44 @@ auto NetJob::addNetAction(const Net::Request::Ptr& action) -> bool
 
 void NetJob::executeNextSubTask()
 {
-    // We're finished, check for failures and retry if we can (up to 3 times)
+    // Waiting to retry: other finished downloads must not end the job meanwhile.
+    if (!m_retryWaiting.isEmpty()) {
+        return;
+    }
+    // We're finished, check for failures and retry if we can (NetworkRetryLimit times)
     if (isRunning() && m_queue.isEmpty() && m_doing.isEmpty() && !m_failed.isEmpty() && m_try <= m_maxTries) {
-        m_try += 1;
         m_failed.removeIf([this](QHash<Task*, Task::Ptr>::iterator task) {
-            // there is no point in retying on 404 Not Found
-            if (static_cast<Net::Request*>(task->get())->replyStatusCode() == 404) {
+            // Only a request that got no answer (timed out, refused or dropped connection) is worth repeating;
+            // a server's 4xx or 5xx answer would come back the same.
+            if (static_cast<Net::Request*>(task->get())->replyStatusCode() != 0) {
                 return false;
             }
             m_done.remove(task->get());
-            m_queue.enqueue(*task);
+            m_retryWaiting.append(*task);
             return true;
         });
+        if (!m_retryWaiting.isEmpty()) {
+            // A short pause first: a network that just dropped connections often lets the next ones through.
+            const int delayMs = 2000 * m_try;
+            for (const auto& task : m_retryWaiting) {
+                const auto* request = static_cast<Net::Request*>(task.get());
+                qCWarning(taskNetLogC) << "Retrying" << request->url().toString() << "in" << delayMs / 1000 << "s (try" << m_try + 1
+                                       << "of" << m_maxTries + 1 << "):" << request->errorString();
+            }
+            setStatus(tr("Connection problem, trying again in %1 s").arg(delayMs / 1000));
+            m_try += 1;
+            QTimer::singleShot(delayMs, this, [this] {
+                if (m_retryWaiting.isEmpty() || !isRunning()) {
+                    return;
+                }
+                for (const auto& task : std::exchange(m_retryWaiting, {})) {
+                    m_restart.insert(task.get());
+                    m_queue.enqueue(task);
+                }
+                ConcurrentTask::executeNextSubTask();
+            });
+            return;
+        }
     }
     ConcurrentTask::executeNextSubTask();
 }
@@ -112,11 +140,20 @@ auto NetJob::canAbort() const -> bool
 
 auto NetJob::abort() -> bool
 {
-    // fail all downloads on the queue
+    // fail all downloads on the queue, and those waiting to retry
     for (const auto& task : m_queue) {
         m_failed.insert(task.get(), task);
     }
     m_queue.clear();
+    if (!m_retryWaiting.isEmpty()) {
+        for (const auto& task : std::exchange(m_retryWaiting, {})) {
+            m_failed.insert(task.get(), task);
+        }
+        if (m_doing.isEmpty()) {
+            emitAborted();
+            return true;
+        }
+    }
 
     if (m_doing.isEmpty()) {
         // no downloads to abort, NetJob is not running

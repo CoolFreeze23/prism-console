@@ -101,6 +101,8 @@ class ConcurrentTask : public Task {
     QHash<Task*, Task::Ptr> m_done;
     QHash<Task*, Task::Ptr> m_failed;
     QHash<Task*, Task::Ptr> m_succeeded;
+    // Failed subtasks queued again to be retried: they start over instead of reporting their earlier failure.
+    QSet<Task*> m_restart;
 
     QHash<QUuid, std::shared_ptr<TaskStepProgress>> m_task_progress;
 

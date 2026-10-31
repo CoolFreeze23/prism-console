@@ -81,4 +81,6 @@ class NetJob : public ConcurrentTask {
     int m_try = 1;
     int m_maxTries = 3;
     bool m_askRetry = true;
+    // Requests waiting out the pause before their retry.
+    QList<Task::Ptr> m_retryWaiting;
 };

@@ -44,3 +44,17 @@ DISPLAY=:$(cat /build/native-xvfb-display) PRISM_CONSOLE=1 QTWEBENGINE_DISABLE_S
   /build/prismlauncher --dir /build/console-smoke-data >/build/native-launcher-failure.log 2>&1 &
 launcher_pid=$!
 python /src/console-ui/launch-failure-smoke.py
+
+# A network that drops a connection: the first connection to Prism's metadata server stalls until Prism's
+# timeout, Prism retries quietly, and New instance still lists Minecraft versions.
+kill "$launcher_pid"; wait "$launcher_pid" 2>/dev/null || true
+python /src/console-ui/launch-failure-smoke.py restore
+: > /build/retry-proxy.log
+python /src/console-ui/retry-smoke.py prepare
+python /src/console-ui/retry-smoke.py proxy &
+proxy_pid=$!
+trap 'kill "$launcher_pid" "$xvfb_pid" "$proxy_pid" 2>/dev/null || true; wait "$launcher_pid" 2>/dev/null || true; python /src/console-ui/retry-smoke.py restore' EXIT
+DISPLAY=:$(cat /build/native-xvfb-display) PRISM_CONSOLE=1 QTWEBENGINE_DISABLE_SANDBOX=1 QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:9222 QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu \
+  /build/prismlauncher --dir /build/console-smoke-data >/build/native-launcher-retry.log 2>&1 &
+launcher_pid=$!
+python /src/console-ui/retry-smoke.py
