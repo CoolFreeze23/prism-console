@@ -3,7 +3,7 @@
 // The service layer is replaced with Prism's in-process QWebChannel bridge.
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { connect, invoke, type Snapshot, type Resource, type ModpackState, type ModUpdateState } from './bridge'
-import { moveFocus, useGamepad, useGamepadAction } from './upstream/gamepad'
+import { beginTextEntry, isTextField, moveFocus, useGamepad, useGamepadAction } from './upstream/gamepad'
 import { chooseLocale, locale, t, tn, type MessageKey } from './i18n'
 import { en } from './messages/en'
 import fallbackIcon from './fallback.svg'
@@ -70,7 +70,8 @@ watch(() => state.value.prompt?.id, id => {
 function focusDialog() {
   // Preference order: the current section of a settings-style page, then the first control, then Close.
   const root = modalRoot.value
-  const target = ['.workflow-sidebar [aria-pressed=true]', '.dialog-body button:not(:disabled), .dialog-body input', 'header button:not(:disabled)']
+  // A text field is never the starting point: on a controller it would only open the keyboard.
+  const target = ['.workflow-sidebar [aria-pressed=true]', '.dialog-body [data-autofocus]', '.dialog-body button:not(:disabled)', '.dialog-body input', 'header button:not(:disabled)']
     .map(selector => root?.querySelector<HTMLElement>(selector)).find(Boolean)
   target?.focus()
 }
@@ -183,7 +184,7 @@ watch(overlay, async (value, previous) => {
   gamepad.registerContext('prism-launch', {
     root: () => overlayRoot.value,
     onCancel: () => overlay.value === 'failed' ? (launchFailure.value = null) : hideLaunch(),
-    onConfirm: () => (document.activeElement as HTMLElement)?.click(),
+    onConfirm: confirmFocused,
   })
   await nextTick(); overlayRoot.value?.querySelector<HTMLElement>('button')?.focus()
 })
@@ -253,6 +254,8 @@ const libraryShortcuts = () => blocked.value || tab.value !== 'Library' || !sele
 useGamepadAction('X', { label: () => t('app.configure'), handler: () => open('edit'), disabled: libraryShortcuts })
 useGamepadAction('Y', { label: () => t('app.mods_packs'), handler: () => open('resources'), disabled: libraryShortcuts })
 let priorFocus: HTMLElement | null = null
+// A on a text field starts typing in it (with Steam's keyboard); on anything else it presses it.
+function confirmFocused() { const active = document.activeElement; if (isTextField(active)) beginTextEntry(active); else (active as HTMLElement)?.click() }
 // View + Menu held for a second switches between the game and Prism (read natively; see GamepadChord).
 const chord = ref(0)
 let chordSeen = 0
@@ -267,9 +270,6 @@ function keyboard() {
   if (Date.now() - lastKeyboard < 1000 || !connected.value) return
   lastKeyboard = Date.now()
   invoke('keyboard').catch(e => { error.value = String(e) })
-}
-function focusInput(event: FocusEvent) {
-  if (gamepad.connected?.value && (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)) keyboard()
 }
 // Interface sounds: focus moved by stick, D-pad or keys (not the pointer), buttons pressed, Play.
 let lastPointer = 0
@@ -306,7 +306,7 @@ async function open(which: string) {
   modal.value = which
   gamepad.registerContext('prism-dialog', {
     root: () => modalRoot.value, onCancel: close,
-    onConfirm: () => (document.activeElement as HTMLElement)?.click(),
+    onConfirm: confirmFocused,
   })
   await nextTick(); focusDialog()
   if (which === 'resources') await loadResources()
@@ -339,14 +339,13 @@ function key(event: KeyboardEvent) {
 onMounted(async () => {
   window.addEventListener('keydown', key)
   window.addEventListener('prism-open-keyboard', keyboard)
-  window.addEventListener('focusin', focusInput)
   window.addEventListener('focusin', focusSound)
   window.addEventListener('pointerdown', pointerSeen, true)
   window.addEventListener('click', clickSound, true)
   try { await connect(refresh, onChord); connected.value = true; await refresh(); await nextTick(); document.querySelector<HTMLElement>('main button')?.focus() }
   catch (e) { error.value = String(e) }
 })
-onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEventListener('prism-open-keyboard', keyboard); window.removeEventListener('focusin', focusInput); window.removeEventListener('focusin', focusSound); window.removeEventListener('pointerdown', pointerSeen, true); window.removeEventListener('click', clickSound, true); gamepad.unregisterContext('prism-dialog'); gamepad.unregisterContext('prism-launch') })
+onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEventListener('prism-open-keyboard', keyboard); window.removeEventListener('focusin', focusSound); window.removeEventListener('pointerdown', pointerSeen, true); window.removeEventListener('click', clickSound, true); gamepad.unregisterContext('prism-dialog'); gamepad.unregisterContext('prism-launch') })
 </script>
 
 <template>

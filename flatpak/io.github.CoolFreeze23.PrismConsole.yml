@@ -73,11 +73,12 @@ modules:
       - type: dir
         path: ..
         skip: [.git, build, repo, .flatpak-builder, console-ui/node_modules, console-ui/artifacts, cmake/vcpkg]
+    # Out-of-source build: post-install runs in the build directory, one level below the sources.
     post-install:
-      - install -Dm755 console-ui/steamos/prism-console /app/bin/prism-console
-      - install -Dm644 console-ui/steamos/io.github.CoolFreeze23.PrismConsole.desktop /app/share/applications/io.github.CoolFreeze23.PrismConsole.desktop
-      - install -Dm644 console-ui/steamos/io.github.CoolFreeze23.PrismConsole.svg /app/share/icons/hicolor/scalable/apps/io.github.CoolFreeze23.PrismConsole.svg
-      - install -Dm644 console-ui/steamos/io.github.CoolFreeze23.PrismConsole.metainfo.xml /app/share/metainfo/io.github.CoolFreeze23.PrismConsole.metainfo.xml
+      - install -Dm755 ../console-ui/steamos/prism-console /app/bin/prism-console
+      - install -Dm644 ../console-ui/steamos/io.github.CoolFreeze23.PrismConsole.desktop /app/share/applications/io.github.CoolFreeze23.PrismConsole.desktop
+      - install -Dm644 ../console-ui/steamos/io.github.CoolFreeze23.PrismConsole.svg /app/share/icons/hicolor/scalable/apps/io.github.CoolFreeze23.PrismConsole.svg
+      - install -Dm644 ../console-ui/steamos/io.github.CoolFreeze23.PrismConsole.metainfo.xml /app/share/metainfo/io.github.CoolFreeze23.PrismConsole.metainfo.xml
       # Prism's own desktop entry, icons and metainfo would show a second "Prism Launcher" app.
       - rm -f /app/share/applications/org.prismlauncher.PrismLauncher.desktop /app/share/metainfo/org.prismlauncher.PrismLauncher.metainfo.xml
-      - rm -f /app/share/icons/hicolor/*/apps/org.prismlauncher.PrismLauncher.* /app/share/mime/packages/modrinth-mrpack-mime.xml
+      - rm -f /app/share/icons/hicolor/*/apps/org.prismlauncher.PrismLauncher.* /app/share/mime/packages/org.prismlauncher.PrismLauncher.xml

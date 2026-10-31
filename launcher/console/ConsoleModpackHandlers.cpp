@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
+#include <QRegularExpression>
 #include <QUrlQuery>
 #include "ConsoleBridge.h"
 #include "ConsoleBridgeSupport.h"
@@ -113,10 +114,29 @@ void ConsoleBridge::registerModpackHandlers()
     on({ "searchModpacks" }, [this](const QString&, const QVariantMap& args) -> QVariantMap {
         const auto query = args.value("query").toString().trimmed().left(200);
         const int offset = qBound(0, args.value("offset").toInt(), 10000);
+        // Filters: one mod loader, one Minecraft release, and Modrinth's sort order. Unknown values are refused
+        // rather than passed on, since they become part of Modrinth's facet syntax.
+        static const QStringList loaders{ "fabric", "forge", "neoforge", "quilt" };
+        static const QStringList sorts{ "relevance", "downloads", "newest", "updated" };
+        static const QRegularExpression versionPattern("^[0-9][0-9A-Za-z.-]{0,23}$");
+        const auto loader = args.value("loader").toString();
+        const auto gameVersion = args.value("gameVersion").toString();
+        const auto sort = args.value("sort").toString();
+        if (!loader.isEmpty() && !loaders.contains(loader))
+            return fail("Unknown mod loader");
+        if (!gameVersion.isEmpty() && !versionPattern.match(gameVersion).hasMatch())
+            return fail("Unknown Minecraft version");
+        if (!sort.isEmpty() && !sorts.contains(sort))
+            return fail("Unknown sort order");
+        QJsonArray facets{ QJsonArray{ "project_type:modpack" } };
+        if (!loader.isEmpty())
+            facets.append(QJsonArray{ "categories:" + loader });
+        if (!gameVersion.isEmpty())
+            facets.append(QJsonArray{ "versions:" + gameVersion });
         QUrlQuery params;
         params.addQueryItem("query", query);
-        params.addQueryItem("facets", R"([["project_type:modpack"]])");
-        params.addQueryItem("index", query.isEmpty() ? "downloads" : "relevance");
+        params.addQueryItem("facets", QString::fromUtf8(QJsonDocument(facets).toJson(QJsonDocument::Compact)));
+        params.addQueryItem("index", !sort.isEmpty() ? sort : query.isEmpty() ? "downloads" : "relevance");
         params.addQueryItem("limit", QString::number(kPageSize));
         params.addQueryItem("offset", QString::number(offset));
         QUrl url(kModrinthApi + "/search");
@@ -124,7 +144,24 @@ void ConsoleBridge::registerModpackHandlers()
 
         const int serial = ++m_modpackSearchSerial;
         m_modpacks["query"] = query;
+        m_modpacks["filters"] = QVariantMap{ { "loader", loader }, { "gameVersion", gameVersion }, { "sort", sort } };
         m_modpacks["loading"] = true;
+        // Minecraft releases for the version filter, fetched once (newest first).
+        if (!m_modpacks.contains("gameVersions")) {
+            m_modpacks["gameVersions"] = QStringList{};
+            modrinthGet(QUrl(kModrinthApi + "/tag/game_version"), [this](const QJsonDocument& json, const QString& error) {
+                QStringList releases;
+                for (const auto& value : json.array())
+                    if (value.toObject().value("version_type").toString() == "release")
+                        releases.append(value.toObject().value("version").toString());
+                if (!error.isEmpty() || releases.isEmpty()) {
+                    m_modpacks.remove("gameVersions");  // try again with the next search
+                    return;
+                }
+                m_modpacks["gameVersions"] = releases;
+                modpacksChanged();
+            });
+        }
         m_modpacks["error"] = QString();
         if (offset == 0) {
             m_modpacks["hits"] = QVariantList{};

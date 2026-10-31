@@ -75,6 +75,29 @@ try {
   await page.evaluate(() => { window.padFixture.connected = true; window.padFixture.axes[1] = 1 })
   await page.waitForFunction(p => document.activeElement.textContent !== p, disconnectedFocus)
   await page.evaluate(() => { window.padFixture.axes[1] = 0 })
+  // Text fields: landing on one does not trap the stick; A starts typing (the pad then belongs to Steam's
+  // keyboard), B stops typing and the stick moves on again.
+  const stick = async (focusMoves) => {
+    await page.waitForTimeout(250)
+    await page.evaluate(() => { window.padFixture.axes[1] = 1 })
+    await page.waitForTimeout(400)
+    await page.evaluate(() => { window.padFixture.axes[1] = 0 })
+    await page.waitForTimeout(250)
+    const inField = await page.evaluate(() => document.activeElement?.matches('input[type=search]'))
+    assert.equal(inField, !focusMoves, focusMoves ? 'the stick should leave the text field' : 'the stick should stay in the field while typing')
+  }
+  const press = async (index) => {
+    await page.evaluate(i => { window.padFixture.buttons[i].pressed = true }, index); await page.waitForTimeout(120)
+    await page.evaluate(i => { window.padFixture.buttons[i].pressed = false }, index); await page.waitForTimeout(200)
+  }
+  await page.evaluate(() => document.querySelector('input[type=search]').focus())
+  await stick(true)
+  await page.evaluate(() => document.querySelector('input[type=search]').focus())
+  await press(0)  // A: start typing
+  await stick(false)
+  await press(1)  // B: stop typing, focus stays on the field
+  assert.equal(await page.evaluate(() => document.activeElement?.matches('input[type=search]')), true)
+  await stick(true)
   await page.evaluate(() => {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64
     const ctx = canvas.getContext('2d')

@@ -172,6 +172,22 @@ call('setLanguage', language='en_US' if language not in ('en_US', 'pt_BR') else 
 assert call('snapshot')['language'] in ('en_US', language)
 print('PASS: language choice stored and restored')
 
+# Search filters against the live Modrinth API: a loader and a Minecraft release narrow the results, the
+# release list for the version filter arrives once, and values outside the known set are refused.
+call('searchModpacks', query='')
+everything = wait(lambda: (s := call('modpacks')) and not s.get('loading') and s, 'unfiltered search')
+assert not everything.get('error') and everything['total'] > 0, everything.get('error')
+releases = wait(lambda: call('modpacks').get('gameVersions'), 'Minecraft releases', 30)
+assert '1.21.1' in releases and '1.20.1' in releases and not any('w' in v or '-pre' in v for v in releases), releases[:10]
+call('searchModpacks', query='', loader='neoforge', gameVersion='1.21.1', sort='newest')
+narrowed = wait(lambda: (s := call('modpacks')) and not s.get('loading') and s, 'filtered search')
+assert not narrowed.get('error') and 0 < narrowed['total'] < everything['total'], (narrowed.get('error'), narrowed.get('total'), everything['total'])
+assert narrowed['filters'] == {'loader': 'neoforge', 'gameVersion': '1.21.1', 'sort': 'newest'}, narrowed['filters']
+for bad in ({'loader': 'rift'}, {'gameVersion': '1.21"]]'}, {'sort': 'random'}):
+    assert refused('searchModpacks', query='', **bad), bad
+print(f"PASS: filters narrow {everything['total']} modpacks to {narrowed['total']} (NeoForge, 1.21.1, newest); "
+      f"{len(releases)} releases offered; bad values refused")
+
 call('searchModpacks', query='Simply Optimized')
 state = wait(lambda: (s := call('modpacks')) and not s.get('loading') and s, 'search results')
 assert not state.get('error'), state['error']

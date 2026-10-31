@@ -865,6 +865,8 @@ const useGamepadCore = createGlobalState(() => {
   function isTextEntryFocused() {
     const active = document.activeElement
     if (!active || active === document.body) return false
+    // Local change: only while the player is typing in it (see typingIn), not because focus landed on it.
+    if (active !== typingIn) return false
     if (active instanceof HTMLTextAreaElement) return true
     if (active instanceof HTMLInputElement) {
       return !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(active.type)
@@ -911,6 +913,7 @@ const useGamepadCore = createGlobalState(() => {
         if (input) {
           input.focus()
           input.select?.()
+          typingIn = input
           if (autoOpenKeyboard.value) {
             try {
               window.dispatchEvent(new Event('prism-open-keyboard'))
@@ -1054,14 +1057,8 @@ const useGamepadCore = createGlobalState(() => {
     // Steam's on-screen keyboard shares the controller with the launcher.
     // Do not let its navigation move focus, scroll, or activate launcher UI.
     if (isTextEntryFocused()) {
-      if (justPressed(buttons, GamepadButtonIndex.B)) {
-        const active = document.activeElement as HTMLElement | null
-        if (active) {
-          active.blur?.()
-          const input = active.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea')
-          input?.blur?.()
-        }
-      }
+      // B stops typing; focus stays on the field so the stick and D-pad move on from it.
+      if (justPressed(buttons, GamepadButtonIndex.B)) endTextEntry()
       syncPreviousButtons(buttons)
       return
     }
@@ -1145,6 +1142,33 @@ const useGamepadCore = createGlobalState(() => {
  * hints call it with no arguments; the host (AppGamepadPrompt) passes `options`
  * once to wire the high-level actions and the enable-prompt callback.
  */
+/*
+ * Local change: a text field takes over the controller (so Steam's on-screen keyboard can use it) only while the
+ * player is typing in it: after A on the field, a tap, or a typed key. Moving focus onto a field no longer traps
+ * the D-pad and sticks there. Enter or Escape in the field, B, or leaving it hands the controller back.
+ */
+let typingIn: Element | null = null
+export function beginTextEntry(input: HTMLInputElement | HTMLTextAreaElement) {
+  input.focus()
+  input.select?.()
+  typingIn = input
+  window.dispatchEvent(new Event('prism-open-keyboard'))
+}
+export function endTextEntry() { typingIn = null }
+export function isTextField(element: Element | null): element is HTMLInputElement | HTMLTextAreaElement {
+  if (element instanceof HTMLTextAreaElement) return true
+  return element instanceof HTMLInputElement && !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(element.type)
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('focusout', event => { if (event.target === typingIn) typingIn = null })
+  window.addEventListener('pointerdown', event => { if (isTextField(event.target as Element)) typingIn = event.target as Element }, true)
+  window.addEventListener('keydown', event => {
+    if (!isTextField(event.target as Element)) return
+    if (event.key === 'Enter' || event.key === 'Escape') typingIn = null
+    else if (event.key.length === 1 || event.key === 'Backspace') typingIn = event.target as Element
+  }, true)
+}
+
 export function useGamepad(options?: UseGamepadOptions) {
   const core = useGamepadCore()
   if (options) core.boot(options)

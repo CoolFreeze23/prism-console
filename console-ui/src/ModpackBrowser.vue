@@ -6,7 +6,15 @@ import { invoke, type ModpackState } from './bridge'
 import fallbackIcon from './fallback.svg'
 const props = defineProps<{ state: ModpackState; busy: boolean }>()
 const emit = defineEmits<{ installed: []; error: [message: string] }>()
-const query = ref(''), chosen = ref(''), release = ref(''), name = ref('')
+const query = ref(props.state.query || ''), chosen = ref(''), release = ref(''), name = ref('')
+// Filters: one loader, one Minecraft release, a sort order ('' = popular without a query, best match with one).
+const loader = ref(props.state.filters?.loader || ''), gameVersion = ref(props.state.filters?.gameVersion || ''), sort = ref(props.state.filters?.sort || '')
+const loaders = [['', 'modpacks.filter.anyLoader'], ['fabric', 'Fabric'], ['neoforge', 'NeoForge'], ['forge', 'Forge'], ['quilt', 'Quilt']] as const
+const sorts = ['downloads', 'relevance', 'newest', 'updated'] as const
+const shownSort = computed(() => sort.value || (query.value.trim() ? 'relevance' : 'downloads'))
+const versions = computed(() => ['', ...(props.state.gameVersions || [])])
+const versionIndex = computed(() => Math.max(0, versions.value.indexOf(gameVersion.value)))
+const filtered = computed(() => !!(loader.value || gameVersion.value || sort.value))
 const hits = computed(() => props.state.hits || [])
 const pack = computed(() => hits.value.find(h => h.id === chosen.value))
 const releases = computed(() => props.state.project === chosen.value ? props.state.versions || [] : [])
@@ -31,7 +39,17 @@ function back(event: Event) {
 onMounted(() => window.addEventListener('prism-back', back))
 onUnmounted(() => window.removeEventListener('prism-back', back))
 function call(method: string, args: Record<string, unknown> = {}) { return invoke(method, args).catch(e => emit('error', String(e))) }
-function search(offset = 0) { return call('searchModpacks', { query: query.value, offset }) }
+function search(offset = 0) { return call('searchModpacks', { query: query.value, offset, loader: loader.value, gameVersion: gameVersion.value, sort: sort.value }) }
+function setFilter(apply: () => void) { apply(); chosen.value = ''; search() }
+// Stepping through versions searches once the player stops on one.
+let versionTimer: number | undefined
+function stepVersion(direction: number) {
+  const next = versions.value[Math.min(versions.value.length - 1, Math.max(0, versionIndex.value + direction))]
+  if (next === gameVersion.value) return
+  gameVersion.value = next; chosen.value = ''
+  window.clearTimeout(versionTimer); versionTimer = window.setTimeout(() => search(), 450)
+}
+function clearFilters() { setFilter(() => { loader.value = ''; gameVersion.value = ''; sort.value = '' }) }
 function choose(id: string) {
   chosen.value = id; release.value = ''
   name.value = hits.value.find(h => h.id === id)?.title || ''
@@ -58,10 +76,24 @@ onMounted(() => { if (!hits.value.length) search() })
         <input v-model="query" type="search" :placeholder="t('modpacks.search_modrinth_modpacks')" :aria-label="t('modpacks.search_modrinth_modpacks')">
         <button type="submit" :disabled="state.loading">{{ t('modpacks.search') }}</button>
       </form>
+      <div class="modpack-filters">
+        <div class="control-segmented" role="radiogroup" :aria-label="t('modpacks.filter.loader')">
+          <button v-for="[id, label] in loaders" :key="id" role="radio" :data-loader="id" :aria-checked="loader === id" @click="setFilter(() => loader = id)">{{ id ? label : t(label) }}</button>
+        </div>
+        <div class="modpack-version" role="group" :aria-label="t('modpacks.filter.version')">
+          <button :aria-label="t('modpacks.filter.newerVersion')" data-action="version-newer" :disabled="versionIndex === 0" @click="stepVersion(-1)">‹</button>
+          <output>{{ gameVersion ? t('app.minecraftVersion', { version: gameVersion }) : t('modpacks.filter.anyVersion') }}</output>
+          <button :aria-label="t('modpacks.filter.olderVersion')" data-action="version-older" :disabled="versionIndex >= versions.length - 1" @click="stepVersion(1)">›</button>
+        </div>
+        <div class="control-segmented" role="radiogroup" :aria-label="t('modpacks.filter.sort')">
+          <button v-for="id in sorts" :key="id" role="radio" :data-sort="id" :aria-checked="shownSort === id" @click="setFilter(() => sort = id)">{{ t(`modpacks.sort.${id}`) }}</button>
+        </div>
+        <button v-if="filtered" data-action="clear-filters" @click="clearFilters">{{ t('modpacks.filter.reset') }}</button>
+      </div>
       <div v-if="state.error" role="alert" class="modpack-error"><span>{{ state.error }}</span><button @click="retry">{{ t('launch.tryAgain') }}</button></div>
-      <p v-if="!hits.length" class="muted" role="status">{{ state.loading ? t('modpacks.loadingList') : t('modpacks.none') }}</p>
+      <p v-if="!hits.length" class="muted" role="status">{{ state.loading ? t('modpacks.loadingList') : filtered ? t('modpacks.noneFiltered') : t('modpacks.none') }}</p>
       <div class="modpack-grid">
-        <button v-for="hit in hits" :key="hit.id" class="modpack-card" :data-id="hit.id" :aria-pressed="hit.id === chosen" @click="choose(hit.id)">
+        <button v-for="(hit, index) in hits" :key="hit.id" class="modpack-card" :data-id="hit.id" :data-autofocus="index === 0 || undefined" :aria-pressed="hit.id === chosen" @click="choose(hit.id)">
           <img :src="icons[hit.id] || fallbackIcon" alt="" loading="lazy">
           <span class="modpack-card-text">
             <strong>{{ hit.title }}</strong>
@@ -96,6 +128,11 @@ onMounted(() => { if (!hits.value.length) search() })
 .modpacks { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 38%); gap: 28px; align-items: start; }
 .modpack-search { display: flex; gap: 12px; margin-bottom: 16px; }
 .modpack-search input { flex: 1; }
+.modpack-filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 16px; }
+.modpack-filters .control-segmented button { min-height: 40px; padding: 6px 12px; font-size: 14px; }
+.modpack-version { display: flex; align-items: center; gap: 8px; }
+.modpack-version button { min-width: 44px; min-height: 40px; font-size: 20px; padding: 4px; }
+.modpack-version output { min-width: 150px; text-align: center; font-weight: 600; }
 .modpack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .modpack-card { display: flex; gap: 14px; align-items: flex-start; text-align: left; padding: 14px; min-height: 112px; }
 .modpack-card img { width: 64px; height: 64px; flex: none; image-rendering: auto; }

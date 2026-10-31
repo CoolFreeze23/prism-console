@@ -14,6 +14,8 @@ export interface ModpackRelease { id: string; name: string; number: string; type
 export interface ModpackState {
   query?: string; loading?: boolean; error?: string; total?: number; hits?: ModpackHit[]
   project?: string; versions?: ModpackRelease[]; versionsLoading?: boolean
+  /** The filters of the last search, and Minecraft releases (newest first) for the version filter. */
+  filters?: { loader: string; gameVersion: string; sort: string }; gameVersions?: string[]
 }
 export interface ModUpdate { name: string; from: string; to: string; beta: boolean; changelog: string }
 export interface ModUpdateState {

@@ -259,16 +259,29 @@ Players use A/B/X/Y and sticks; buttons are large, one line. `{name}` style plac
 | `launcher.trackMetadata.hint` | Keeps each mod's Modrinth details so Prism can find updates for it. | Launcher settings page: a setting name on a switch or -/+ stepper row; keys ending .hint are the one-line grey explanation under it (max 2 lines) |  |
 | `modpacks.byAuthor` | by {author} · {downloads} downloads | Browse modpacks page — sentence / paragraph |  |
 | `modpacks.byline` | {author} · {downloads} downloads | Browse modpacks page — small caption |  |
+| `modpacks.filter.anyLoader` | Any loader | Browse modpacks page — text |  |
+| `modpacks.filter.anyVersion` | Any version | Browse modpacks page — BUTTON (keep short) | 17 |
+| `modpacks.filter.loader` | Mod loader | Browse modpacks page — screen-reader label (not shown) |  |
+| `modpacks.filter.newerVersion` | Newer version | Browse modpacks page — screen-reader label (not shown) |  |
+| `modpacks.filter.olderVersion` | Older version | Browse modpacks page — screen-reader label (not shown) |  |
+| `modpacks.filter.reset` | Clear filters | Browse modpacks page — BUTTON (keep short) | 19 |
+| `modpacks.filter.sort` | Sort | Browse modpacks page — screen-reader label (not shown) |  |
+| `modpacks.filter.version` | Minecraft version | Browse modpacks page — screen-reader label (not shown) |  |
 | `modpacks.install` | Install {name} | Browse modpacks page — BUTTON (keep short) | 20 |
 | `modpacks.loadMore` | Load more | Browse modpacks page — BUTTON (keep short) | 15 |
 | `modpacks.loading` | Loading… | Browse modpacks page — BUTTON (keep short) | 14 |
 | `modpacks.loadingList` | Loading modpacks… | Browse modpacks page — sentence / paragraph |  |
 | `modpacks.loading_releases` | Loading releases… | Browse modpacks page — sentence / paragraph |  |
 | `modpacks.none` | No modpacks found. | Browse modpacks page — sentence / paragraph |  |
+| `modpacks.noneFiltered` | No modpacks match these filters. Try another version or loader, or clear the filters. | Browse modpacks page — sentence / paragraph |  |
 | `modpacks.release` | Release | Browse modpacks page — section heading |  |
 | `modpacks.search` | Search | Modrinth mod catalog page — BUTTON (keep short); Browse modpacks page — BUTTON (keep short) | 12 |
 | `modpacks.search_modrinth_modpacks` | Search Modrinth modpacks | Browse modpacks page — input placeholder |  |
 | `modpacks.selected_modpack` | Selected modpack | Browse modpacks page — screen-reader label (not shown) |  |
+| `modpacks.sort.downloads` | Popular | launch screen / toasts |  |
+| `modpacks.sort.newest` | Newest | launch screen / toasts |  |
+| `modpacks.sort.relevance` | Best match | launch screen / toasts |  |
+| `modpacks.sort.updated` | Recently updated | launch screen / toasts |  |
 | `modpacks.this_modpack_has_no_releases` | This modpack has no releases Prism can install. | Browse modpacks page — sentence / paragraph |  |
 | `modpacks.type.alpha` | alpha | release channel tag |  |
 | `modpacks.type.beta` | beta | release channel tag |  |
@@ -317,7 +330,10 @@ Players use A/B/X/Y and sticks; buttons are large, one line. `{name}` style plac
 | `native.stopFirst` | Stop the game and finish current tasks first | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
 | `native.stopText` | Stopping a running game can lose unsaved progress. Save your world first. | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
 | `native.stopTitle` | Cancel launch or stop game? | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
+| `native.unknownGameVersion` | Unknown Minecraft version | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
+| `native.unknownLoader` | Unknown mod loader | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
 | `native.unknownSetting` | Unknown setting | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
+| `native.unknownSort` | Unknown sort order | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
 | `native.valueOutOfRange` | Value out of range | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
 | `native.waitOperation` | Wait for the current operation to finish | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
 | `native.waitTask` | Wait for the current task to finish | text from the launcher core: prompt titles, prompt buttons, status lines, refusal messages (toast) |  |
