@@ -39,6 +39,11 @@
 #include <QStringDecoder>
 #include "MessageLevel.h"
 
+#ifdef Q_OS_UNIX
+#include <signal.h>
+#include <unistd.h>
+#endif
+
 LoggedProcess::LoggedProcess(const QStringConverter::Encoding output_codec, QObject* parent)
     : QProcess(parent), m_err_decoder(output_codec), m_out_decoder(output_codec)
 {
@@ -104,6 +109,11 @@ void LoggedProcess::on_exit(int exit_code, QProcess::ExitStatus status)
             changeState(LoggedProcess::Crashed);
         }
     } else {
+#ifdef Q_OS_UNIX
+        // A process the game started (a crash reporter waiting for a click) would outlive a deliberate stop.
+        if (m_own_group && m_pid > 0)
+            ::killpg(static_cast<pid_t>(m_pid), SIGKILL);
+#endif
         //: Message displayed after the instance exits due to kill request
         emit log({ tr("Process was killed by user.") }, MessageLevel::Error);
         changeState(LoggedProcess::Aborted);
@@ -131,7 +141,29 @@ void LoggedProcess::on_error(QProcess::ProcessError error)
 void LoggedProcess::kill()
 {
     m_is_aborting = true;
+#ifdef Q_OS_UNIX
+    if (m_own_group && m_pid > 0 && ::killpg(static_cast<pid_t>(m_pid), SIGKILL) == 0)
+        return;
+#endif
     QProcess::kill();
+}
+
+void LoggedProcess::stop()
+{
+    m_is_aborting = true;
+#ifdef Q_OS_UNIX
+    if (m_own_group && m_pid > 0 && ::killpg(static_cast<pid_t>(m_pid), SIGTERM) == 0)
+        return;
+#endif
+    QProcess::terminate();
+}
+
+void LoggedProcess::setOwnProcessGroup()
+{
+#ifdef Q_OS_UNIX
+    m_own_group = true;
+    setChildProcessModifier([] { ::setpgid(0, 0); });
+#endif
 }
 
 int LoggedProcess::exitCode() const
@@ -165,6 +197,7 @@ void LoggedProcess::on_stateChange(QProcess::ProcessState state)
             return;
         }
         case QProcess::Running: {
+            m_pid = processId();
             if (m_state != LoggedProcess::Starting) {
                 qWarning() << "Wrong state change for process from state" << m_state << "to" << (int)LoggedProcess::Running;
             }

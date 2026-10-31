@@ -167,6 +167,25 @@ watch(() => state.value.launches, launches => {
 const stages = ['account', 'files', 'starting'] as const
 const now = ref(Date.now())
 let ticker: number | undefined
+// Stop asks the game to save and close; after 20 s it says so, and Force close (which can lose progress) stays the
+// explicit second choice. The card closes itself once the game has gone.
+const stopping = ref<{ id: string; at: number } | null>(null)
+const stopSlow = computed(() => !!stopping.value && now.value - stopping.value.at > 20000)
+async function stopGame(force: boolean) {
+  const id = selectedId.value
+  if (!id) return
+  if (!force) {
+    stopping.value = { id, at: Date.now() }
+    nextTick(() => modalRoot.value?.querySelector<HTMLElement>('[data-autofocus]')?.focus())
+  } else close()
+  await action('stop', { id, force })
+  if (error.value && stopping.value?.id === id) stopping.value = null
+}
+watch(() => stopping.value && state.value.instances.find(i => i.id === stopping.value!.id)?.running, stillRunning => {
+  if (!stopping.value || stillRunning) return
+  stopping.value = null
+  if (modal.value === 'stop') close()
+})
 const stageIndex = computed(() => Math.max(0, stages.indexOf((launchState.value?.stage || 'account') as typeof stages[number])))
 const elapsed = computed(() => launchState.value?.startedAt ? Math.max(0, Math.floor((now.value - launchState.value.startedAt) / 1000)) : 0)
 // Nothing new for 15 s: say what is still happening instead of looking frozen.
@@ -195,7 +214,7 @@ watch(() => launchState.value?.status, status => {
   if (!text || activity.value[activity.value.length - 1]?.text === text) return
   activity.value = [...activity.value.slice(-5), { at: elapsed.value, text }]
 })
-watch(() => !!overlay.value || !!launching.value, on => { window.clearInterval(ticker); if (on) ticker = window.setInterval(() => { now.value = Date.now() }, 1000) }, { immediate: true })
+watch(() => !!overlay.value || !!launching.value || !!stopping.value, on => { window.clearInterval(ticker); if (on) ticker = window.setInterval(() => { now.value = Date.now() }, 1000) }, { immediate: true })
 const blocked = computed(() => !!modal.value || !!overlay.value)
 watch(overlay, async (value, previous) => {
   if (!value) { gamepad.unregisterContext('prism-launch'); return }
@@ -423,7 +442,7 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
               <button tabindex="-1" class="hero-action primary-action" data-action="play" :disabled="busy || !connected || (!selected.running && (!selected.canLaunch || selected.launching))" @click="playSelected">
                 <ButtonGlyph button="A" accent large />{{ selected.running ? t('running.backToGame') : selected.launching ? t('app.starting') : t('app.play') }}
               </button>
-              <button v-if="selected.running" class="hero-action" data-action="stop-game" :disabled="busy" @click="open('stop')"><ButtonGlyph button="X" />{{ t('app.stop_game') }}</button>
+              <button v-if="selected.running" class="hero-action" data-action="stop-game" :disabled="busy" @click="open('stop')"><ButtonGlyph button="X" />{{ stopping?.id === selected.id ? t('app.closingGame') : t('app.stop_game') }}</button>
               <button v-else class="hero-action" data-action="mods" @click="open('resources')"><ButtonGlyph button="X" />{{ t('app.mods_packs') }}</button>
               <button tabindex="-1" class="hero-action" data-action="worlds" @click="open('worlds')"><ButtonGlyph button="Y" />{{ t('app.worlds') }}</button>
             </div>
@@ -579,7 +598,8 @@ onUnmounted(() => { window.removeEventListener('keydown', key); window.removeEve
           <div class="actions"><button data-action="add-to-steam" :disabled="busy || state.task?.active" @click="action('addToSteam', { id: selectedId })">{{ selected?.steamAppId ? t('app.updateSteamTile') : t('app.addToSteam') }}</button><button @click="modal = 'copy'">{{ t('app.copy_instance') }}</button><button @click="modal = 'worlds'">{{ t('app.worlds') }}</button><button @click="modal = 'notes'">{{ t('app.notes') }}</button><button @click="modal = 'export'">{{ t('app.export_instance') }}</button><button @click="action('instanceDialog', { id: selectedId, page: 'version' })">{{ t('app.full_instance_editor') }}</button><button @click="open('commands')">{{ t('app.all_instance_tools') }}</button></div>
         </template>
         <template v-else-if="modal === 'cancel-launch'"><p>{{ t('launch.cancelQuestion', { name: launching?.name || 'Minecraft' }) }}</p><div class="actions"><button @click="close">{{ t('launch.keepStarting') }}</button><button data-action="confirm-cancel-launch" :disabled="busy || !launching" @click="action('cancelLaunch', { id: launching!.id }); close()">{{ t('launch.cancelShort') }}</button></div></template>
-        <template v-else-if="modal === 'stop'"><p>{{ t('app.this_closes_the_game_immediately') }}</p><div class="actions"><button @click="close">{{ t('app.keep_playing') }}</button><button data-action="confirm-stop" :disabled="busy" @click="action('stop', { id: selectedId }); close()">{{ t('app.stop_game') }}</button></div></template>
+        <template v-else-if="modal === 'stop' && stopping?.id === selectedId"><p role="status" class="stop-status">{{ stopSlow ? t('app.stopSlow') : t('app.savingAndClosing') }}</p><p class="muted">{{ t('app.forceCloseWarning') }}</p><div class="actions"><button data-autofocus @click="close">{{ t('app.keepWaiting') }}</button><button data-action="force-close" :disabled="busy" @click="stopGame(true)">{{ t('app.forceClose') }}</button></div></template>
+        <template v-else-if="modal === 'stop'"><p>{{ t('app.stopSaves') }}</p><div class="actions"><button @click="close">{{ t('app.keep_playing') }}</button><button data-action="confirm-stop" :disabled="busy" @click="stopGame(false)">{{ t('app.stop_game') }}</button></div></template>
         <template v-else><section v-if="state.task?.title"><h3>{{ state.task.title }}</h3><p role="status">{{ tn(state.task.status) }}</p><button v-if="state.task.active" @click="action('cancelTask')">{{ t('app.cancel_task') }}</button><progress v-if="state.task.active" :value="state.task.total ? state.task.current : undefined" :max="state.task.total || 1" /></section><p v-if="!state.instances.some(i => i.running)">{{ t('app.no_games_are_running') }}</p><div class="row" v-for="i in state.instances.filter(i => i.running)" :key="i.id">{{ i.name }}</div></template>
       </div>
       <div class="dialog-hints" aria-hidden="true"><span class="hint"><ButtonGlyph button="A" /> {{ t('app.select') }}</span><span v-if="modal !== 'setup'" class="hint"><ButtonGlyph button="B" /> {{ t('app.back') }}</span></div>

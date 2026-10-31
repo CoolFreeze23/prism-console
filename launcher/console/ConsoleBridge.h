@@ -78,6 +78,7 @@ private:
     QMap<QString, QPointer<Task>> m_launchTasks;
     QSet<QString> m_gameStarted;      // launches whose game window now has the screen
     QSet<QString> m_handOffScheduled; // launches with a fallback hand-off pending
+    QSet<QString> m_stopRequested;    // games the user chose to stop, so their exit is not a crash
     void watchGameWindow(const QString& id, LogModel* log);
     void handOffToGame(const QString& id);
     void updateLaunch(const QString& id, const QVariantMap& changes);

@@ -37,6 +37,38 @@ describe('Prism controller UI', () => {
     await button('Keep playing').trigger('click')
     expect(wrapper!.find('[role=dialog]').exists()).toBe(false)
   })
+  it('stops a game by letting it save, with force close as a second choice, and closes the card once it is gone', async () => {
+    let running = true
+    let notify = () => {}
+    mocks.connect.mockImplementation(async (callback: () => void) => { notify = callback })
+    mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? { instances: [{ ...instance, running, canLaunch: !running }], accounts: [] } : undefined)
+    wrapper = mount(App, { attachTo: document.body }); await flushPromises()
+    await button('Stop game').trigger('click'); await flushPromises()
+    expect(wrapper.find('[role=dialog]').text()).toContain('saves your world')
+    await wrapper.find('[data-action=confirm-stop]').trigger('click'); await flushPromises()
+    expect(mocks.invoke).toHaveBeenCalledWith('stop', { id: 'stable-id', force: false })
+    expect(wrapper.find('.stop-status').text()).toBe('Saving and closing…')
+    expect(wrapper.find('[role=dialog]').text()).toContain('Unsaved progress may be lost')
+    await wrapper.find('[data-action=force-close]').trigger('click'); await flushPromises()
+    expect(mocks.invoke).toHaveBeenCalledWith('stop', { id: 'stable-id', force: true })
+    expect(wrapper.find('[role=dialog]').exists()).toBe(false)
+    expect(label(wrapper.find('[data-action=stop-game]').element)).toBe('Closing…')
+    running = false; notify(); await flushPromises()
+    expect(wrapper.find('[data-action=stop-game]').exists()).toBe(false)
+  })
+  it('closes the stop card by itself when the game finishes saving', async () => {
+    let running = true
+    let notify = () => {}
+    mocks.connect.mockImplementation(async (callback: () => void) => { notify = callback })
+    mocks.invoke.mockImplementation(async (method: string) => method === 'snapshot' ? { instances: [{ ...instance, running, canLaunch: !running }], accounts: [] } : undefined)
+    wrapper = mount(App, { attachTo: document.body }); await flushPromises()
+    await button('Stop game').trigger('click'); await flushPromises()
+    await wrapper.find('[data-action=confirm-stop]').trigger('click'); await flushPromises()
+    expect(wrapper.find('.stop-status').exists()).toBe(true)
+    running = false; notify(); await flushPromises()
+    expect(wrapper.find('[role=dialog]').exists()).toBe(false)
+    expect(mocks.invoke.mock.calls.filter(c => c[0] === 'stop')).toEqual([['stop', { id: 'stable-id', force: false }]])
+  })
   it('keeps onboarding open until settings are explicitly chosen', async () => {
     let required = true
     mocks.connect.mockResolvedValue(undefined)

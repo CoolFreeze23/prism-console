@@ -84,6 +84,11 @@ class LaunchTask : public Task {
 
     bool canAbort() const override;
 
+    /**
+     * @brief stop the running game: ask it to exit so it saves, or end it at once when force
+     */
+    bool stopGame(bool force);
+
     shared_qobject_ptr<LogModel> getLogModel();
 
    public:

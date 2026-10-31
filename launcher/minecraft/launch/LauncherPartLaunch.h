@@ -29,6 +29,7 @@ class LauncherPartLaunch : public LaunchStep {
 
     virtual void executeTask();
     virtual bool abort();
+    bool stopGame(bool force) override;
     virtual void proceed();
     virtual bool canAbort() const { return true; }
     void setWorkingDirectory(const QString& wd);

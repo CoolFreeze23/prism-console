@@ -102,6 +102,8 @@ void LauncherPartLaunch::executeTask()
 
     // make detachable - this will keep the process running even if the object is destroyed
     m_process.setDetachable(true);
+    // its own process group, so stopping the game also ends whatever the game started
+    m_process.setOwnProcessGroup();
 
     auto classPath = instance->getClassPath();
     classPath.prepend(jarPath);
@@ -236,5 +238,15 @@ bool LauncherPartLaunch::abort()
             m_process.kill();
         }
     }
+    return true;
+}
+
+bool LauncherPartLaunch::stopGame(bool force)
+{
+    if (force || mayProceed)
+        return abort();
+    auto state = m_process.state();
+    if (state == LoggedProcess::Running || state == LoggedProcess::Starting)
+        m_process.stop();
     return true;
 }

@@ -57,6 +57,12 @@ class LoggedProcess : public QProcess {
 
     void setDetachable(bool detachable);
 
+    /**
+     * @brief start the process as the leader of its own process group, so stop() and kill() reach every process it
+     * starts (Unix only; call before start())
+     */
+    void setOwnProcessGroup();
+
    signals:
     void log(QStringList lines, MessageLevel level);
     void stateChanged(LoggedProcess::State state);
@@ -66,6 +72,11 @@ class LoggedProcess : public QProcess {
      * @brief kill the process - equivalent to kill -9
      */
     void kill();
+
+    /**
+     * @brief ask the process (and its group) to exit - equivalent to kill -15, so the game's shutdown hooks can save
+     */
+    void stop();
 
    private slots:
     void on_stdErr();
@@ -87,4 +98,6 @@ class LoggedProcess : public QProcess {
     int m_exit_code = 0;
     bool m_is_aborting = false;
     bool m_is_detachable = false;
+    bool m_own_group = false;
+    qint64 m_pid = 0;
 };

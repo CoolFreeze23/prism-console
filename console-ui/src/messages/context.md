@@ -111,7 +111,13 @@ Players use A/B/X/Y and sticks; buttons are large, one line. `{name}` style plac
 | `app.taskDone` | {title}: done | main shell (library, accounts, settings, dialogs, launch screen) — text |  |
 | `app.taskFailed` | {title} failed. {reason} | main shell (library, accounts, settings, dialogs, launch screen) — text |  |
 | `app.tasks` | Tasks | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 11 |
-| `app.this_closes_the_game_immediately` | This closes the game immediately. Save your world first. | main shell (library, accounts, settings, dialogs, launch screen) — sentence / paragraph |  |
+| `app.stopSaves` | The game saves your world, then closes. | Stop game card, before confirming — sentence |  |
+| `app.savingAndClosing` | Saving and closing… | Stop game card, after Stop while the game saves — status |  |
+| `app.stopSlow` | The game is taking a while to close. It may still be saving. | Stop game card, 20 s after Stop — status sentence |  |
+| `app.forceCloseWarning` | Force close ends the game at once. Unsaved progress may be lost. | Stop game card, under the status — warning sentence |  |
+| `app.forceClose` | Force close | Stop game card — button that ends the game without saving |  |
+| `app.keepWaiting` | Keep waiting | Stop game card — button that leaves the game closing |  |
+| `app.closingGame` | Closing… | library hero button while the game closes — button label |  |
 | `app.updateSteamTile` | Update Steam tile | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 23 |
 | `app.useAccount` | Use this account | main shell (library, accounts, settings, dialogs, launch screen) — inline text |  |
 | `app.use_automatic_java` | Use automatic Java | main shell (library, accounts, settings, dialogs, launch screen) — BUTTON (keep short) | 24 |

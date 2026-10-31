@@ -37,6 +37,12 @@ class LaunchStep : public Task {
     virtual void proceed() {};
     // called in the opposite order than the Task launch(), used to clean up or otherwise undo things after the launch ends
     virtual void finalize() {};
+    // Stop a running game: ask it to exit (so it can save) unless force, which ends it at once.
+    virtual bool stopGame(bool force)
+    {
+        Q_UNUSED(force);
+        return abort();
+    }
 
    protected: /* data */
     LaunchTask* m_parent;

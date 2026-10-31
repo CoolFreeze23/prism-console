@@ -101,7 +101,7 @@ onMounted(loadWorlds)
     <div v-if="tab === 'worlds'" class="worlds-layout">
       <div class="world-list">
         <p v-if="loaded && !worlds.length" class="muted">{{ t('worlds.no_worlds_yet_they_appear') }}</p>
-        <button v-for="w in recentFirst" :key="w.id" class="world-row" :aria-pressed="w.id === chosen" @click="chosen = w.id">
+        <button v-for="w in recentFirst" :key="w.id" class="world-row" :data-world="w.id" :aria-pressed="w.id === chosen" @click="chosen = w.id">
           <img :src="w.icon || fallbackIcon" alt="">
           <span class="setting-text"><span>{{ w.name || w.id }}</span><small>{{ w.mode }} · {{ when(w.lastPlayedMs) }} · {{ size(w.size) }}</small></span>
         </button>

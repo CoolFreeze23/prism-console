@@ -73,6 +73,7 @@ ConsoleBridge::ConsoleBridge(MainWindow* window) : QObject(window), m_window(win
         m_launchTasks[id] = controller;
         m_gameStarted.remove(id);
         m_handOffScheduled.remove(id);
+        m_stopRequested.remove(id);
         // Stages follow Prism's launch structure rather than its status text: "account" until the launch task
         // exists, "files" while it prepares libraries, assets and Java, "starting" once the game process runs,
         // "running" when its window has the screen. The renderer adds timing and stall messages.
@@ -82,6 +83,11 @@ ConsoleBridge::ConsoleBridge(MainWindow* window) : QObject(window), m_window(win
         connect(controller, &Task::status, this, [update](const QString& status) { update({{"status", status}}); });
         connect(controller, &Task::progress, this, [update](qint64 current, qint64 total) { update({{"current", current}, {"total", total}}); });
         connect(controller, &Task::failed, this, [this, id, update](const QString& reason) {
+            // Prism reports a stopped game as failed ("Game crashed."); a stop the user asked for is a normal close.
+            if (m_stopRequested.remove(id)) {
+                update({{"active", false}, {"status", "Game exited"}, {"stage", "closed"}, {"stopped", true}, {"endedAt", QDateTime::currentMSecsSinceEpoch()}});
+                return;
+            }
             // After the game had its window this is a crash, not a launch problem; include the log's last lines.
             QStringList tail;
             if (const auto log = m_logs.value(id))

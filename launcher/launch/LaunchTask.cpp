@@ -201,6 +201,19 @@ bool LaunchTask::abort()
     return false;
 }
 
+bool LaunchTask::stopGame(bool force)
+{
+    // A graceful stop leaves the task Aborted while the game saves; a force close afterwards still reaches the step.
+    const bool stopping = state == LaunchTask::Aborted && force && currentStep >= 0;
+    if (state != LaunchTask::Running && state != LaunchTask::Waiting && !stopping)
+        return abort();
+    auto step = m_steps[currentStep];
+    if (!step->canAbort() || !step->stopGame(force))
+        return false;
+    state = LaunchTask::Aborted;
+    return true;
+}
+
 shared_qobject_ptr<LogModel> LaunchTask::getLogModel()
 {
     if (!m_logModel) {

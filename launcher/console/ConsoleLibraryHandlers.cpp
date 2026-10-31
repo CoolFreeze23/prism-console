@@ -432,15 +432,23 @@ void ConsoleBridge::registerLibraryHandlers()
         return ok(QVariantMap{{"total", files.size()}, {"offset", offset}, {"shots", shots}});
     });
 
-    onInstance({"stop"}, [this](MinecraftInstance* inst, const QString&, const QVariantMap&) -> QVariantMap {
+    // Stop asks the game to exit so Minecraft saves the world (SIGTERM to its process group); force ends it at once.
+    // Either way the exit is reported as closed, not as a crash.
+    onInstance({"stop"}, [this](MinecraftInstance* inst, const QString&, const QVariantMap& args) -> QVariantMap {
         if (!inst->isRunning()) return fail("No running game to stop");
         const auto id = inst->id();
-        QTimer::singleShot(0, this, [id] {
-            if (auto* current = APPLICATION->instances()->getInstanceById(id)) {
-                s_stopConfirmed = true; // the renderer's "Stop game?" card was the confirmation
-                APPLICATION->kill(current);
-                s_stopConfirmed = false;
+        const bool force = args.value("force").toBool();
+        m_stopRequested.insert(id);
+        QTimer::singleShot(0, this, [id, force] {
+            auto* current = APPLICATION->instances()->getInstanceById(id);
+            if (!current) return;
+            if (auto* task = current->getLaunchTask(); task && task->pid() > 0) {
+                task->stopGame(force);
+                return;
             }
+            s_stopConfirmed = true; // the renderer's "Stop game?" card was the confirmation
+            APPLICATION->kill(current);
+            s_stopConfirmed = false;
         });
         return ok();
     });
