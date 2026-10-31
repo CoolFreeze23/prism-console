@@ -35,7 +35,7 @@ defineExpose({ close: () => action({ control: props.flow.id, op: 'close' }) })
 .setting-toggle, .setting-select { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 100%; text-align: left; border-image: none !important; border: 0; border-bottom: 1px solid var(--pc-raised); background: transparent; padding: 12px 14px; min-height: 64px; }
 .setting-toggle:hover:not(:disabled), .setting-select:hover:not(:disabled) { background: #252627; }
 .setting-text { display: grid; gap: 4px; min-width: 0; }
-.setting-text small { color: var(--ore-muted); font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.setting-text small { color: var(--ore-muted); font-size: 15px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .switch { flex: none; position: relative; width: 52px; height: 30px; border-radius: 15px; background: var(--pc-surface); box-shadow: inset 0 0 0 2px var(--pc-line); }
 .switch > span { position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; border-radius: 50%; background: var(--pc-text-2); transition: transform 120ms ease, background-color 120ms ease; }
 [aria-checked=true] > .switch { background: var(--pc-text); box-shadow: none; }

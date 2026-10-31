@@ -86,7 +86,8 @@ time.sleep(2)
 environment_report()
 if js("!!document.querySelector('[role=dialog] #dialog-title')?.textContent.includes('Welcome')"):
     print('Onboarding shown; keeping existing settings:', click('Keep current settings')); time.sleep(1)
-print('Selected CrazyCraft card:', js("(() => { const c = [...document.querySelectorAll('.instance-card')].find(c => c.textContent.includes('CrazyCraft')); c?.click(); return !!c })()"))
+# Picking a pack is one tap; a tap on the pack that is already picked would play it.
+print('Selected CrazyCraft card:', js("(() => { const c = [...document.querySelectorAll('.instance-card')].find(c => c.textContent.includes('CrazyCraft')); if (c && !c.classList.contains('selected')) c.click(); return !!c })()"))
 time.sleep(1)
 ui_shot('1-library')
 pad = VirtualPad()
@@ -100,7 +101,7 @@ seen, started, last_shot = [], time.time(), 0
 result = 'timeout'
 while time.time() - started < 900:
     state = overlay()
-    running = js("document.querySelector('[data-action=stop-game]') !== null")
+    running = js("document.querySelector('.running-banner') !== null")
     prompt = js("document.querySelector('.dialog-compact #dialog-title')?.textContent || null")
     if prompt == 'Offline player name' and 'offline' not in seen:
         # Microsoft/Mojang sign-in unreachable: Prism offers offline play. Answer as a player would and continue.

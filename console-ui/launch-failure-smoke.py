@@ -81,7 +81,7 @@ wait("document.querySelector('.bp-container')?.dataset.connected === 'true'", 'p
 account = wait("document.querySelector('.account-chip > span:last-child')?.textContent.trim()", 'account chip')
 assert account == 'SmokePlayer', f'Refusing to launch with a real account ({account})'
 view = """(() => { const r = document.querySelector('.launch-overlay [role=alert][data-reason]'); if (!r) return null; const o = r.closest('.launch-overlay');
-  return { reason: r.dataset.reason, text: r.textContent.trim(), eyebrow: o.querySelector('.eyebrow')?.textContent.trim(), actions: [...o.querySelectorAll('[data-action]')].map(b => b.dataset.action) } })()"""
+  return { reason: r.dataset.reason, text: r.textContent.trim(), eyebrow: o.querySelector('.failed-step')?.textContent.trim(), actions: [...o.querySelectorAll('[data-action]')].map(b => b.dataset.action) } })()"""
 
 def play_until_failure():
     assert click('[data-action=play]'), 'Play is not available'
