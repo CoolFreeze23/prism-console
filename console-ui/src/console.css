@@ -37,10 +37,11 @@ main { flex: 1; min-height: 0; overflow: auto; padding: 0 40px 24px; }
 .lib-hero.empty { height: 260px; }
 
 /* Shelf: the library, picked by moving along it. */
-.shelf { display: flex; flex-direction: column; gap: 16px; }
+.shelf { display: flex; flex-direction: column; gap: 20px; }
 .shelf h2 { margin: 0; font-size: 28px; }
 .shelf h2 span { color: var(--pc-text-3); font-weight: 500; }
-.shelf-row { display: flex; gap: 24px; overflow-x: auto; overflow-y: hidden; padding: 14px 12px 8px; margin: -14px -12px 0; scroll-padding: 0 40px; scrollbar-width: none; }
+/* The row clips what sticks out, so its padding holds the lifted tile and its ring (about 16 px above the art). */
+.shelf-row { display: flex; gap: 24px; overflow-x: auto; overflow-y: hidden; padding: 20px 12px 8px; margin: -20px -12px 0; scroll-padding: 0 40px; scrollbar-width: none; }
 .shelf-row::-webkit-scrollbar { display: none; }
 .instance-card { flex: none; width: 192px; min-height: 0; padding: 0; display: flex; flex-direction: column; align-items: stretch; gap: 10px; text-align: left; background: transparent; transition: transform 120ms ease-out; }
 .instance-card, .instance-card.selected, .instance-card:hover:not(:disabled), .instance-card[aria-pressed=true] { background: transparent; border: 0; box-shadow: none; }
