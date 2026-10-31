@@ -22,7 +22,7 @@ def process_env(pid):
 def environment_report():
     import subprocess
     app = subprocess.run(['pgrep', '-f', '^/app/bin/prismlauncher --dir'], capture_output=True, text=True).stdout.split()
-    host = subprocess.run(['pgrep', '-f', '^dbus-run-session flatpak run .*io.github.CoolFreeze23.PrismConsole'], capture_output=True, text=True).stdout.split()
+    host = subprocess.run(['pgrep', '-f', '^flatpak run .*QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:9223 .*io.github.CoolFreeze23.PrismConsole'], capture_output=True, text=True).stdout.split()
     if not app or not host: failures.append('could not find the app or its launcher process'); return
     started, inside = process_env(host[0]), process_env(app[0])
     print(f"Started with LC_ALL={started.get('LC_ALL', '-')} SteamGamepadUI={started.get('SteamGamepadUI', '-')} LD_PRELOAD={'set' if started.get('LD_PRELOAD') else '-'}; "

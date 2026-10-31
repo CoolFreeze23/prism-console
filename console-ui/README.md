@@ -11,8 +11,7 @@ or PiLauncher backend is used. See UPSTREAM.md for exact revisions and notices.
 The look ("display case") lives in `src/theme.css` and `src/console.css`: warm graphite surfaces, Archivo,
 one accent kept for the primary controller action, and one white focus ring. Each pack's own icon is its artwork
 (`src/PackArt.vue`): icons of 64 px or less are scaled by whole numbers with hard pixels, larger ones are fitted
-without cropping, and a pack without an icon gets its initial. Design mockups can be rendered for review with
-`node artifacts/dc-render.mjs <out-dir> <file.dc.html>...`.
+without cropping, and a pack without an icon gets its initial.
 
 ## Build
 
