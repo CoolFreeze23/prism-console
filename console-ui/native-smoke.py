@@ -97,15 +97,22 @@ for attempt in range(20):
     time.sleep(.5)
 assert mods.get('data'), mods
 resource = mods['data'][0]
+# A disable renames the file and Prism rescans the folder; the list shows the new state once that rescan is done.
+def mod_state(expected, seconds=10):
+    for _ in range(seconds * 4):
+        current = call('resources', id='console-smoke', kind='mods')['data'][0]
+        if current['enabled'] is expected: return current
+        time.sleep(.25)
+    raise AssertionError(f'mod still not enabled={expected} after {seconds} s: {current}')
 assert call('setResourceEnabled', id='console-smoke', kind='mods', resourceId=resource['id'], enabled=False)['ok']
-time.sleep(1)
-resource = call('resources', id='console-smoke', kind='mods')['data'][0]
-assert resource['enabled'] is False, resource
+resource = mod_state(False)
 assert call('setResourceEnabled', id='console-smoke', kind='mods', resourceId=resource['id'], enabled=False)['ok']
-time.sleep(1)
-resource = call('resources', id='console-smoke', kind='mods')['data'][0]
-assert resource['enabled'] is False, 'Repeated disable accidentally re-enabled the resource'
+for _ in range(8):  # a repeated disable must never flip it back on while the rescans settle
+    time.sleep(.25)
+    assert call('resources', id='console-smoke', kind='mods')['data'][0]['enabled'] is False, 'Repeated disable accidentally re-enabled the resource'
+resource = mod_state(False)
 assert call('setResourceEnabled', id='console-smoke', kind='mods', resourceId=resource['id'], enabled=True)['ok']
+mod_state(True)
 
 assert evaluate("document.querySelector('.bp-container')?.dataset.connected === 'true'"), 'UI never connected to native bridge'
 command('Page.reload')

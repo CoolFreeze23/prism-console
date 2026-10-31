@@ -58,9 +58,8 @@
 #include "net/ChecksumValidator.h"
 #include "net/MetaCacheSink.h"
 #include "settings/SettingsObject.h"
-#else
-#include "BuildConfig.h"
 #endif
+#include "BuildConfig.h"
 #include "net/ByteArraySink.h"
 #include "net/FileSink.h"
 #include "net/Logging.h"
@@ -153,10 +152,11 @@ void Request::executeTask()
             return;
     }
 
-#ifdef LAUNCHER_APPLICATION
-    auto userAgent = APPLICATION->getUserAgent();
-#else
     auto userAgent = BuildConfig.USER_AGENT;
+#ifdef LAUNCHER_APPLICATION
+    // APPLICATION_DYN: requests also run without the launcher (unit tests)
+    if (APPLICATION_DYN)
+        userAgent = APPLICATION->getUserAgent();
 #endif
     request.setHeader(QNetworkRequest::UserAgentHeader, userAgent.toUtf8());
     for (auto& headerProxy : m_headerProxies) {
@@ -164,7 +164,10 @@ void Request::executeTask()
     }
 
 #ifdef LAUNCHER_APPLICATION
-    request.setTransferTimeout(APPLICATION->settings()->get("RequestTimeout").toInt() * 1000);
+    if (APPLICATION_DYN)
+        request.setTransferTimeout(APPLICATION->settings()->get("RequestTimeout").toInt() * 1000);
+    else
+        request.setTransferTimeout();
 #else
     request.setTransferTimeout();
 #endif
@@ -216,31 +219,34 @@ void Request::onProgress(qint64 bytesReceived, qint64 bytesTotal)
     setProgress(bytesReceived, bytesTotal);
 }
 
+// Seconds a server asked us to wait (Retry-After: seconds or an HTTP date), or 0.
+static qint64 retryAfterSeconds(QNetworkReply* reply)
+{
+    if (!reply || !reply->hasRawHeader("Retry-After"))
+        return 0;
+    const auto retryAfter = reply->rawHeader("Retry-After").trimmed();
+    if (retryAfter.endsWith("GMT")) /* HTTP Date format */ {
+        auto afterTimestamp = QDateTime::fromString(QString::fromUtf8(retryAfter), "ddd, dd MMM yyyy HH:mm:ss 'GMT'");
+        if (afterTimestamp.isValid())
+            return qMax<qint64>(0, QDateTime::currentDateTime().secsTo(afterTimestamp));
+        return 0;
+    }
+    bool ok = false;
+    const auto seconds = retryAfter.toLongLong(&ok);
+    return ok && seconds > 0 ? seconds : 0;
+}
+
 void Request::downloadError(QNetworkReply::NetworkError error)
 {
+    m_retryAfter = retryAfterSeconds(m_reply.get());
     if (error == QNetworkReply::OperationCanceledError) {
         qCCritical(m_logCat) << getUid().toString() << "Aborted" << m_url.toString();
         m_state = State::Failed;
     } else if (replyStatusCode() == 429 /* HTTP Too Many Requests*/ && m_options.testFlag(Option::AutoRetry)) {
         qCDebug(m_logCat) << getUid().toString() << "Rate Limited!";
         auto delay = static_cast<int64_t>(10 * std::pow(2, m_retryCount));
-        if (m_reply->hasRawHeader("Retry-After")) {
-            auto retryAfter = m_reply->rawHeader("Retry-After");
-            if (retryAfter.trimmed().endsWith("GMT")) /* HTTP Date format */ {
-                auto afterTimestamp = QDateTime::fromString(QString::fromUtf8(retryAfter.trimmed()), "ddd, dd MMM yyyy HH:mm:ss 'GMT'");
-                if (afterTimestamp.isValid()) {
-                    auto seconds = QDateTime::currentDateTime().secsTo(afterTimestamp);
-                    if (seconds > 0) {
-                        delay = seconds;
-                    }
-                }
-            } else {
-                bool ok = false;
-                auto seconds = retryAfter.toLongLong(&ok);
-                if (ok && seconds > 0) {
-                    delay = seconds;
-                }
-            }
+        if (m_retryAfter > 0) {
+            delay = m_retryAfter;
         }
         handleAutoRetry(delay);
     } else {

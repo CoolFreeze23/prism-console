@@ -20,6 +20,13 @@ no_game_downloads() {
   [ -z "$hits" ] || { echo "FAIL: the smoke tried to download Minecraft game files:"; echo "$hits"; exit 1; }
   echo "PASS: no Minecraft game-file downloads ($(basename "$1"))"
 }
+# Download retries against a scripted local server: 503 then 200 and 429 with Retry-After are retried,
+# 404 and 500 are not.
+if /build/LauncherTests NetJob_test >/build/netjob-test.log 2>&1; then
+  echo "PASS: download retries: 503 then 200 and 429 (Retry-After 3 s) retried; 404 and 500 answered once"
+else
+  cat /build/netjob-test.log; echo "FAIL: download retries"; exit 1
+fi
 Xvfb -displayfd 3 -screen 0 1280x800x24 3>/build/native-xvfb-display >/build/native-xvfb.log 2>&1 &
 xvfb_pid=$!
 trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT

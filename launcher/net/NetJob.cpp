@@ -80,19 +80,24 @@ void NetJob::executeNextSubTask()
     }
     // We're finished, check for failures and retry if we can (NetworkRetryLimit times)
     if (isRunning() && m_queue.isEmpty() && m_doing.isEmpty() && !m_failed.isEmpty() && m_try <= m_maxTries) {
-        m_failed.removeIf([this](QHash<Task*, Task::Ptr>::iterator task) {
-            // Only a request that got no answer (timed out, refused or dropped connection) is worth repeating;
-            // a server's 4xx or 5xx answer would come back the same.
-            if (static_cast<Net::Request*>(task->get())->replyStatusCode() != 0) {
+        qint64 retryAfter = 0;
+        m_failed.removeIf([this, &retryAfter](QHash<Task*, Task::Ptr>::iterator task) {
+            // Worth repeating: no answer at all (timed out, refused or dropped connection), or a server saying it is
+            // busy or briefly unavailable (429, 502, 503, 504). Any other answer would come back the same.
+            const auto* request = static_cast<Net::Request*>(task->get());
+            static const QSet<int> transient{ 0, 429, 502, 503, 504 };
+            if (!transient.contains(request->replyStatusCode())) {
                 return false;
             }
+            retryAfter = qMax(retryAfter, request->retryAfter());
             m_done.remove(task->get());
             m_retryWaiting.append(*task);
             return true;
         });
         if (!m_retryWaiting.isEmpty()) {
-            // A short pause first: a network that just dropped connections often lets the next ones through.
-            const int delayMs = 2000 * m_try;
+            // A short pause first: a network that just dropped connections often lets the next ones through, and a
+            // server's Retry-After (up to a minute) is honoured.
+            const int delayMs = static_cast<int>(qMax<qint64>(2000 * m_try, qMin<qint64>(retryAfter, 60) * 1000));
             for (const auto& task : m_retryWaiting) {
                 const auto* request = static_cast<Net::Request*>(task.get());
                 qCWarning(taskNetLogC) << "Retrying" << request->url().toString() << "in" << delayMs / 1000 << "s (try" << m_try + 1

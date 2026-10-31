@@ -147,6 +147,8 @@ class Request : public Task {
     void setUrl(QUrl url) { m_url = std::move(url); }
     int replyStatusCode() const;
     QNetworkReply::NetworkError error() const;
+    //! seconds the server asked to wait before trying again (Retry-After), or 0
+    qint64 retryAfter() const { return m_retryAfter; }
     QString errorString() const;
 
    private:
@@ -188,6 +190,7 @@ class Request : public Task {
     std::vector<std::unique_ptr<Net::HeaderProxy>> m_headerProxies;
 
     int m_retryCount = 0;
+    qint64 m_retryAfter = 0;
     QTimer m_retryTimer;
 
     int m_redirectCount = 0;
